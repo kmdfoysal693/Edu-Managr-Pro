@@ -1,0 +1,6 @@
+{
+  "name": "EduManage Pro - School Management System",
+  "description": "Comprehensive premium School Management System (SMS) administrative dashboard for student, staff, academic, shareholder, attendance, examination, and financial management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
