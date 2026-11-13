@@ -19,5 +19,40 @@
   <body class="bg-slate-50 text-slate-700 antialiased font-['Plus_Jakarta_Sans',sans-serif]">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      (function () {
+        var shown = false;
+        function showFallback(reason) {
+          if (shown) return;
+          var root = document.getElementById('root');
+          if (!root || root.children.length > 0) return;
+          shown = true;
+          root.innerHTML =
+            '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#f8fafc;font-family:system-ui,sans-serif;color:#0f172a">' +
+            '<div style="max-width:520px;width:100%;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 10px 25px rgba(15,23,42,0.08)">' +
+            '<h2 style="margin:0 0 8px;font-size:18px;font-weight:800;color:#172554">Deployment Build Required</h2>' +
+            '<p style="margin:0 0 12px;font-size:13px;line-height:1.6;color:#475569">' + reason + '</p>' +
+            '<div style="background:#f1f5f9;border-radius:10px;padding:12px;font-size:12px;line-height:1.6;color:#334155">' +
+            '<strong>GitHub Pages Setup:</strong><br/>' +
+            '1. Open your repository <strong>Settings &rarr; Pages</strong>.<br/>' +
+            '2. Under <strong>Build and deployment &rarr; Source</strong>, choose <strong>GitHub Actions</strong>.<br/>' +
+            '3. Push to <code>main</code> (includes <code>.github/workflows/deploy.yml</code>) or run <code>npm run build</code> and publish the <code>dist/</code> folder.' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+        }
+        window.addEventListener('error', function (ev) {
+          if (ev && ev.target && ev.target.tagName === 'SCRIPT') {
+            showFallback('The application script could not load directly as uncompiled source (.tsx) or from the configured path.');
+          }
+        }, true);
+        setTimeout(function () {
+          var root = document.getElementById('root');
+          if (root && root.children.length === 0) {
+            showFallback('The application did not finish mounting. Ensure the built dist/ bundle is deployed rather than raw source files.');
+          }
+        }, 3500);
+      })();
+    </script>
   </body>
 </html>
