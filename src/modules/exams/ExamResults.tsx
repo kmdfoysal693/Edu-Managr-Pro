@@ -28,6 +28,7 @@ import {
   Sparkles,
   BookOpen,
 } from 'lucide-react';
+import { printElement } from '../../utils/printUtils';
 
 export const ExamResults: React.FC = () => {
   const { examResults, exams, students, saveExamResult, deleteExamResult, schoolSettings, t } = useSchool();
@@ -1094,7 +1095,11 @@ export const ExamResults: React.FC = () => {
                 size="sm"
                 icon={Printer}
                 onClick={() => {
-                  window.print();
+                  printElement('printable-report-card', {
+                    title: `Report-Card-${selectedResultForCard.studentId}`,
+                    pageSize: 'A4',
+                    orientation: 'portrait',
+                  });
                 }}
               >
                 Print Report Card

@@ -21,6 +21,7 @@ import {
   Search,
   UserCheck,
 } from 'lucide-react';
+import { printElement } from '../../utils/printUtils';
 
 export const QRAttendance: React.FC = () => {
   const { students, staff, qrLogs, recordQRScan, schoolSettings } = useSchool();
@@ -496,7 +497,11 @@ export const QRAttendance: React.FC = () => {
                 size="sm"
                 icon={Printer}
                 onClick={() => {
-                  window.print();
+                  printElement('printable-id-card', {
+                    title: `QR-Smart-Card-${selectedPersonForCard.id}`,
+                    pageSize: 'A4',
+                    orientation: 'portrait',
+                  });
                 }}
               >
                 Print Smart Card

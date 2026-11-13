@@ -31,6 +31,7 @@ import {
   Building,
   Contact,
 } from 'lucide-react';
+import { printElement } from '../../utils/printUtils';
 
 export const ShareholderList: React.FC = () => {
   const { shareholders, updateShareholder, deleteShareholder, setCurrentRoute, schoolSettings } = useSchool();
@@ -501,7 +502,7 @@ export const ShareholderList: React.FC = () => {
         >
           <div className="space-y-5">
             {/* Printable Invoice Container */}
-            <div className="bg-white border-2 border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6 print-page shadow-sm">
+            <div id="printable-shareholder-invoice" className="bg-white border-2 border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6 print-page shadow-sm">
               {/* 1. School Header & Brand */}
               <div className="flex flex-col sm:flex-row items-center justify-between border-b-2 border-slate-800 pb-5 gap-4">
                 <div className="flex items-center gap-3.5">
@@ -698,7 +699,11 @@ export const ShareholderList: React.FC = () => {
                 size="sm"
                 icon={Printer}
                 onClick={() => {
-                  window.print();
+                  printElement('printable-shareholder-invoice', {
+                    title: 'Shareholder-Equity-Statement',
+                    pageSize: 'A4',
+                    orientation: 'portrait',
+                  });
                 }}
               >
                 Print / Save as PDF

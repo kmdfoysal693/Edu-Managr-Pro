@@ -237,9 +237,12 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [userProfile, setUserProfile] = useState<UserProfile>(() => loadFromStorage('profile', initialUserProfile));
   const [schoolSettings, setSchoolSettings] = useState<InstitutionSettings>(() => {
     const loaded = loadFromStorage('school_settings', DEFAULT_SCHOOL_SETTINGS);
+    const rawLogo = loaded?.logo || DEFAULT_SCHOOL_SETTINGS.logo;
+    const normalizedLogo = rawLogo.startsWith('/assets/') ? `.${rawLogo}` : rawLogo;
     return {
       ...DEFAULT_SCHOOL_SETTINGS,
       ...loaded,
+      logo: normalizedLogo,
       language: loaded?.language || 'en',
       timezone: loaded?.timezone || 'Asia/Dhaka',
     };

@@ -31,6 +31,7 @@ import {
   UserCheck,
   ArrowLeftRight,
 } from 'lucide-react';
+import { printElement } from '../../utils/printUtils';
 
 export const TeacherSalary: React.FC = () => {
   const {
@@ -991,7 +992,13 @@ export const TeacherSalary: React.FC = () => {
             <Button
               variant="primary"
               size="sm"
-              onClick={() => window.print()}
+              onClick={() =>
+                printElement('a4-salary-statement', {
+                  title: 'Monthly-Salary-Statement',
+                  pageSize: 'A4',
+                  orientation: 'landscape',
+                })
+              }
               className="flex items-center gap-1.5 font-bold"
             >
               <Printer className="w-4 h-4" />
@@ -1223,7 +1230,7 @@ export const TeacherSalary: React.FC = () => {
       >
         {selectedVoucher && (
           <div className="space-y-4">
-            <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 text-slate-900">
+            <div id="printable-salary-voucher" className="bg-slate-50 p-6 rounded-xl border border-slate-200 text-slate-900 print-page">
               {/* Header */}
               <div className="flex items-center justify-between border-b border-slate-200 pb-4 mb-4">
                 <div className="flex items-center gap-3">
@@ -1321,7 +1328,13 @@ export const TeacherSalary: React.FC = () => {
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => window.print()}
+                onClick={() =>
+                  printElement('printable-salary-voucher', {
+                    title: `Salary-Voucher-${selectedVoucher.receiptNumber}`,
+                    pageSize: 'A4',
+                    orientation: 'portrait',
+                  })
+                }
                 className="flex items-center gap-1.5 font-bold"
               >
                 <Printer className="w-4 h-4" />

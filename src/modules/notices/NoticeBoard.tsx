@@ -24,6 +24,7 @@ import {
   List,
   Palette,
 } from 'lucide-react';
+import { printElement } from '../../utils/printUtils';
 
 export const NoticeBoard: React.FC = () => {
   const { notices, updateNotice, deleteNotice, togglePinNotice, setCurrentRoute, schoolSettings } = useSchool();
@@ -418,7 +419,7 @@ export const NoticeBoard: React.FC = () => {
         >
           <div className="space-y-4">
             {/* Letterhead Print Area */}
-            <div className="bg-white border-2 border-slate-800 rounded-2xl p-6 sm:p-8 print-page relative">
+            <div id="printable-official-notice" className="bg-white border-2 border-slate-800 rounded-2xl p-6 sm:p-8 print-page relative">
               <div className="border-b-2 border-slate-800 pb-4 mb-5 text-center">
                 <div className="flex items-center justify-between mb-2">
                   <div className="w-12 h-12 rounded-full bg-white p-0.5 ring-1 ring-slate-300 shadow-xs flex items-center justify-center shrink-0 overflow-hidden">
@@ -494,7 +495,11 @@ export const NoticeBoard: React.FC = () => {
                 size="sm"
                 icon={Printer}
                 onClick={() => {
-                  window.print();
+                  printElement('printable-official-notice', {
+                    title: `Notice-${selectedNotice.id}`,
+                    pageSize: 'A4',
+                    orientation: 'portrait',
+                  });
                 }}
               >
                 Print Official Notice

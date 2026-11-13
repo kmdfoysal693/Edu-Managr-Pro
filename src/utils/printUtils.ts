@@ -84,7 +84,7 @@ export const printElement = (
       <head>
         <meta charset="utf-8" />
         <title>${title}</title>
-        <base href="${window.location.origin}" />
+        <base href="${window.location.href.split('#')[0].split('?')[0]}" />
         ${headStyles}
         <style>
           @page {

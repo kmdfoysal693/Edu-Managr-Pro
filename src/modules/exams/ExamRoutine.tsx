@@ -27,6 +27,7 @@ import {
   FileText,
   FileSpreadsheet,
 } from 'lucide-react';
+import { printElement } from '../../utils/printUtils';
 
 interface BulkRoutineRow {
   tempId: string;
@@ -566,8 +567,18 @@ export const ExamRoutine: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Print All Routines Button */}
-          <Button variant="outline" icon={Printer} onClick={() => window.print()}>
-            'Print Routine'
+          <Button
+            variant="outline"
+            icon={Printer}
+            onClick={() =>
+              printElement('printable-all-exam-routines', {
+                title: `Exam-Routines-${selectedExam?.name || 'All'}`,
+                pageSize: 'A4',
+                orientation: 'landscape',
+              })
+            }
+          >
+            Print Routine
           </Button>
 
           {/* Primary Multi-Subject Routine Generator Button (User Exact Renaming Requirement) */}
@@ -692,6 +703,7 @@ export const ExamRoutine: React.FC = () => {
       {/* ============================================================== */}
       {/* VIEW 1: UNIFIED ROUTINE FILES VIEW */}
       {/* ============================================================== */}
+      <div id="printable-all-exam-routines">
       {activeViewTab === 'files' && (
         <div className="space-y-4">
           {filteredRoutineFiles.length === 0 ? (
@@ -839,6 +851,7 @@ export const ExamRoutine: React.FC = () => {
           />
         </div>
       )}
+      </div>
 
       {/* ============================================================== */}
       {/* OFFICIAL PRINTABLE ROUTINE FILE MODAL (Invigilator removed)   */}
@@ -982,10 +995,14 @@ export const ExamRoutine: React.FC = () => {
                 size="sm"
                 icon={Printer}
                 onClick={() => {
-                  window.print();
+                  printElement('printable-routine-document', {
+                    title: `Exam-Routine-${selectedRoutineFileForPrint.className}-${selectedRoutineFileForPrint.examName}`,
+                    pageSize: 'A4',
+                    orientation: 'portrait',
+                  });
                 }}
               >
-                'Print Routine File'
+                Print Routine File
               </Button>
             </div>
           </div>

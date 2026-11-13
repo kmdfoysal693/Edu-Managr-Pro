@@ -35,6 +35,7 @@ import {
   Layers,
   ArrowRight,
 } from 'lucide-react';
+import { printElement } from '../../utils/printUtils';
 
 export const FundTransfer: React.FC = () => {
   const {
@@ -1093,11 +1094,17 @@ export const FundTransfer: React.FC = () => {
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => window.print()}
+                onClick={() =>
+                  printElement('printable-fund-transfer-voucher', {
+                    title: `Fund-Transfer-${selectedVoucher.transferNumber}`,
+                    pageSize: 'A4',
+                    orientation: 'portrait',
+                  })
+                }
                 className="flex items-center gap-1.5 font-bold"
               >
                 <Printer className="w-4 h-4" />
-                Print Voucher (Print Voucher)
+                Print Voucher
               </Button>
             </div>
           </div>

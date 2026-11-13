@@ -445,7 +445,7 @@ export const ClassRoutineList: React.FC = () => {
 
   const handlePrint = () => {
     printElement('printable-official-class-routine', {
-      title: `Class-Routine-${selectedClass?.name || 'Academic'}`,
+      title: `Class-Routine-${selectedClass?.className || 'Academic'}`,
       pageSize: 'A4',
       orientation: 'landscape',
     });

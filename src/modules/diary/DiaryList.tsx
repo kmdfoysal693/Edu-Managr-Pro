@@ -19,6 +19,7 @@ import {
   Save,
   CheckCircle2,
 } from 'lucide-react';
+import { printElement } from '../../utils/printUtils';
 
 export const DiaryList: React.FC = () => {
   const { diaryEntries, classes, updateDiaryEntry, deleteDiaryEntry, setCurrentRoute } = useSchool();
@@ -223,41 +224,54 @@ export const DiaryList: React.FC = () => {
           maxWidth="lg"
         >
           <div className="space-y-4 text-xs">
-            <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-              <div>
-                <span className="text-slate-400">Class Teacher:</span>
-                <p className="font-bold text-[#172554] mt-0.5">{selectedDiary.teacherName}</p>
+            <div id="printable-diary-slip" className="bg-white p-4 rounded-xl border border-slate-200 space-y-4 print-page">
+              <div className="border-b border-slate-200 pb-2.5 flex items-center justify-between">
+                <div>
+                  <h4 className="font-extrabold text-sm text-[#172554]">
+                    Digital Class Diary Slip — {selectedDiary.className} (Sec {selectedDiary.section})
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Subject: {selectedDiary.subject} • Date: {selectedDiary.date}
+                  </p>
+                </div>
               </div>
-              <div>
-                <span className="text-slate-400">Submission Due:</span>
-                <p className="font-bold text-rose-600 mt-0.5">{selectedDiary.submissionDate}</p>
+
+              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <div>
+                  <span className="text-slate-400">Class Teacher:</span>
+                  <p className="font-bold text-[#172554] mt-0.5">{selectedDiary.teacherName}</p>
+                </div>
+                <div>
+                  <span className="text-slate-400">Submission Due:</span>
+                  <p className="font-bold text-rose-600 mt-0.5">{selectedDiary.submissionDate}</p>
+                </div>
               </div>
-            </div>
 
-            <div>
-              <span className="font-bold text-[#172554] text-sm block mb-1">Lesson Topic</span>
-              <p className="text-slate-700 bg-blue-50/50 p-3 rounded-lg border border-blue-100 font-semibold">
-                {selectedDiary.lessonTitle}
-              </p>
-            </div>
-
-            <div>
-              <span className="font-bold text-[#172554] text-sm block mb-1">Homework Details</span>
-              <p className="text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-200 whitespace-pre-wrap leading-relaxed">
-                {selectedDiary.homework}
-              </p>
-            </div>
-
-            {selectedDiary.instructions && (
               <div>
-                <span className="font-bold text-amber-800 block mb-1">Important Instructions</span>
-                <p className="text-slate-700 bg-amber-50/70 p-3 rounded-lg border border-amber-200">
-                  {selectedDiary.instructions}
+                <span className="font-bold text-[#172554] text-sm block mb-1">Lesson Topic</span>
+                <p className="text-slate-700 bg-blue-50/50 p-3 rounded-lg border border-blue-100 font-semibold">
+                  {selectedDiary.lessonTitle}
                 </p>
               </div>
-            )}
 
-            <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+              <div>
+                <span className="font-bold text-[#172554] text-sm block mb-1">Homework Details</span>
+                <p className="text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-200 whitespace-pre-wrap leading-relaxed">
+                  {selectedDiary.homework}
+                </p>
+              </div>
+
+              {selectedDiary.instructions && (
+                <div>
+                  <span className="font-bold text-amber-800 block mb-1">Important Instructions</span>
+                  <p className="text-slate-700 bg-amber-50/70 p-3 rounded-lg border border-amber-200">
+                    {selectedDiary.instructions}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="no-print pt-3 border-t border-slate-100 flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setSelectedDiary(null)}>
                 Close
               </Button>
@@ -266,7 +280,11 @@ export const DiaryList: React.FC = () => {
                 size="sm"
                 icon={Printer}
                 onClick={() => {
-                  window.print();
+                  printElement('printable-diary-slip', {
+                    title: `Diary-${selectedDiary.className}-${selectedDiary.subject}`,
+                    pageSize: 'A4',
+                    orientation: 'portrait',
+                  });
                 }}
               >
                 Print Diary Slip
