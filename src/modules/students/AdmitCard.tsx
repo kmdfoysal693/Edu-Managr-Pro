@@ -57,8 +57,8 @@ export const AdmitCard: React.FC = () => {
       </div>
 
       {/* Selectors Bar (Hidden during print) */}
-      <div className="no-print bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2 min-w-[240px]">
+      <div className="no-print bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 flex-1 min-w-0 sm:min-w-[240px]">
           <label className="text-xs font-semibold text-slate-600 shrink-0">Examination:</label>
           <select
             value={selectedExam?.id || ''}
@@ -77,7 +77,7 @@ export const AdmitCard: React.FC = () => {
           </select>
         </div>
 
-        <div className="flex items-center gap-2 min-w-[260px]">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 flex-1 min-w-0 sm:min-w-[260px]">
           <label className="text-xs font-semibold text-slate-600 shrink-0">Student:</label>
           <select
             value={selectedStudent?.studentId || ''}
@@ -126,20 +126,20 @@ export const AdmitCard: React.FC = () => {
         <div className="max-w-3xl mx-auto">
           <div
             id="admit-card-frame"
-            className="bg-white border-2 border-slate-800 rounded-2xl p-6 sm:p-8 shadow-lg print-page relative overflow-hidden"
+            className="bg-white border-2 border-slate-800 rounded-2xl p-4 sm:p-8 shadow-lg print-page relative overflow-hidden"
           >
             {/* Institutional Watermark */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.04]">
               <img
                 src={schoolSettings.logo}
                 alt=""
-                className="w-96 h-96 object-contain"
+                className="w-64 h-64 sm:w-96 sm:h-96 object-contain"
               />
             </div>
 
             {/* Header */}
             <div className="border-b-2 border-slate-800 pb-5 mb-5 text-center relative">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-2">
                 <div className="w-14 h-14 rounded-full bg-white p-1 ring-2 ring-blue-600/30 shadow-sm flex items-center justify-center shrink-0 overflow-hidden">
                   <img
                     src={schoolSettings.logo}
@@ -147,8 +147,8 @@ export const AdmitCard: React.FC = () => {
                     className="w-full h-full object-contain"
                   />
                 </div>
-                <div className="text-center flex-1 px-4">
-                  <h1 className="text-xl sm:text-2xl font-black text-[#172554] tracking-tight uppercase">
+                <div className="text-center flex-1 px-2 sm:px-4">
+                  <h1 className="text-lg sm:text-2xl font-black text-[#172554] tracking-tight uppercase">
                     {schoolSettings.institutionName || schoolSettings.schoolName}
                   </h1>
                   <p className="text-xs text-slate-500 font-medium">
@@ -158,7 +158,7 @@ export const AdmitCard: React.FC = () => {
                     Tel: {schoolSettings.phone} • EIIN: {schoolSettings.eiin} • Estd: {schoolSettings.establishedYear}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 bg-slate-50 rounded-lg border border-slate-200 hidden sm:flex items-center justify-center shrink-0">
                   <QrCode className="w-8 h-8 text-slate-700" />
                 </div>
               </div>
@@ -170,8 +170,8 @@ export const AdmitCard: React.FC = () => {
             </div>
 
             {/* Student Profile Block */}
-            <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 p-4 bg-slate-50/70 border border-slate-200 rounded-xl mb-6">
-              <div className="flex items-center gap-4 min-w-0">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 sm:gap-6 p-3.5 sm:p-4 bg-slate-50/70 border border-slate-200 rounded-xl mb-6">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 min-w-0">
                 <img
                   src={selectedStudent.photo || schoolSettings.logo}
                   alt={selectedStudent.fullName}
@@ -182,7 +182,7 @@ export const AdmitCard: React.FC = () => {
                     <span className="text-slate-400 font-medium">Candidate Name:</span>
                     <p className="text-base font-extrabold text-[#172554]">{selectedStudent.fullName}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5 text-left">
                     <p>
                       <span className="text-slate-400">Student ID: </span>
                       <span className="font-mono font-bold text-blue-700">{selectedStudent.studentId}</span>
@@ -229,8 +229,8 @@ export const AdmitCard: React.FC = () => {
               <h4 className="text-xs font-bold text-[#172554] uppercase tracking-wider mb-2">
                 Examination Schedule & Subjects
               </h4>
-              <div className="border border-slate-300 rounded-lg overflow-hidden">
-                <table className="w-full text-left text-xs">
+              <div className="border border-slate-300 rounded-lg overflow-x-auto">
+                <table className="w-full min-w-[500px] text-left text-xs">
                   <thead className="bg-slate-100 font-bold text-[#172554] border-b border-slate-300">
                     <tr>
                       <th className="px-3 py-2">Date</th>
@@ -274,7 +274,7 @@ export const AdmitCard: React.FC = () => {
             </div>
 
             {/* Signatures & Seal */}
-            <div className="pt-8 border-t border-slate-200 flex items-end justify-between text-xs">
+            <div className="pt-8 border-t border-slate-200 flex flex-col sm:flex-row items-center sm:items-end justify-between gap-6 sm:gap-4 text-xs">
               <div className="text-center">
                 <div className="w-36 border-b border-slate-400 mb-1" />
                 <p className="font-semibold text-slate-600">Signature of Candidate</p>

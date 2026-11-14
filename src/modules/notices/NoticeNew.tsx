@@ -34,7 +34,7 @@ export const NoticeNew: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addNotice({
+    const added = addNotice({
       title: formData.title,
       category: formData.category,
       description: formData.description,
@@ -47,7 +47,9 @@ export const NoticeNew: React.FC = () => {
       attachmentName: formData.attachmentName || undefined,
       author: userProfile.title || 'Office of Principal',
     });
-    setCurrentRoute('notice-board');
+    if (added) {
+      setCurrentRoute('notice-board');
+    }
   };
 
   return (

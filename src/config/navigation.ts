@@ -34,6 +34,7 @@ import {
   BookOpenCheck,
   CalendarPlus,
   CalendarClock,
+  CreditCard,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -189,6 +190,15 @@ export const NAVIGATION_ITEMS: MenuItem[] = [
     subItems: [
       { id: 'notice-new', label: 'New Notice', icon: PlusCircle },
       { id: 'notice-board', label: 'Notice Board', icon: BadgeAlert },
+    ],
+  },
+  {
+    id: 'subscription',
+    label: 'Subscription',
+    icon: CreditCard,
+    defaultSubItem: 'subscription-plans',
+    subItems: [
+      { id: 'subscription-plans', label: 'Subscription Plans', icon: CreditCard },
     ],
   },
 ];

@@ -111,7 +111,7 @@ export const ClassAdd: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addClass({
+    const added = addClass({
       className: formData.className,
       classCode: formData.classCode || formData.className.substring(0, 3).toUpperCase(),
       sections,
@@ -124,7 +124,9 @@ export const ClassAdd: React.FC = () => {
       group: isSecondaryClass ? group : 'General',
       subjectIds: selectedSubjectIds,
     });
-    setCurrentRoute('class-list');
+    if (added) {
+      setCurrentRoute('class-list');
+    }
   };
 
   // Group quick presets for Class 9/10

@@ -596,7 +596,7 @@ export const StudentList: React.FC = () => {
                           GPA: {res.gpa.toFixed(2)} ({res.letterGrade})
                         </span>
                       </div>
-                      <div className="grid grid-cols-3 gap-2 text-[11px] mb-2 text-slate-600">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 sm:gap-2 text-[11px] mb-2 text-slate-600">
                         <div>
                           Total Obtained: <span className="font-bold">{res.totalObtained} / {res.maxTotal}</span>
                         </div>

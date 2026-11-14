@@ -1,0 +1,158 @@
+import { SubscriptionPlan, SubscriptionPlanId, ActiveSubscription } from '../types';
+
+export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+  {
+    id: 'plan-free-trial',
+    tierIndex: '01',
+    name: 'Free Trial',
+    tagline: 'Pilot access to evaluate core school operations',
+    price: 0,
+    durationLabel: '10 Days',
+    durationDays: 10,
+    limits: {
+      students: 10,
+      staff: 2,
+      classes: 2,
+      subjects: 2,
+      examsAndRoutines: 2,
+      feeCollectionPerType: 2,
+      notices: 2,
+    },
+    highlights: [
+      { label: 'Student Registration', value: 'Max 10' },
+      { label: 'Teacher Registration', value: 'Max 2' },
+      { label: 'Classes', value: 'Max 2' },
+      { label: 'Subjects', value: 'Max 2' },
+      { label: 'Exams & Routines', value: 'Max 2' },
+      { label: 'All Fee Collections', value: 'Max 2 per type' },
+      { label: 'Notices', value: 'Max 2' },
+    ],
+  },
+  {
+    id: 'plan-starter',
+    tierIndex: '02',
+    name: 'Starter Annual',
+    tagline: 'Built for emerging schools and primary academies',
+    price: 2500,
+    durationLabel: '1 Year',
+    durationDays: 365,
+    limits: {
+      students: 100,
+      staff: 10,
+      classes: 5,
+      subjects: null,
+      examsAndRoutines: 20,
+      feeCollectionPerType: null,
+      notices: 20,
+    },
+    highlights: [
+      { label: 'Student Registration', value: 'Max 100' },
+      { label: 'Teacher Registration', value: 'Max 10' },
+      { label: 'Classes', value: 'Max 5' },
+      { label: 'Subjects', value: 'Unlimited' },
+      { label: 'Exams & Routines', value: 'Max 20' },
+      { label: 'All Fee Collections', value: 'Unlimited' },
+      { label: 'Notices', value: 'Max 20' },
+    ],
+  },
+  {
+    id: 'plan-growth',
+    tierIndex: '03',
+    name: 'Growth Annual',
+    tagline: 'For expanding campuses with multi-section academics',
+    price: 7500,
+    durationLabel: '1 Year',
+    durationDays: 365,
+    recommended: true,
+    limits: {
+      students: 300,
+      staff: 30,
+      classes: 10,
+      subjects: null,
+      examsAndRoutines: 30,
+      feeCollectionPerType: null,
+      notices: 50,
+    },
+    highlights: [
+      { label: 'Student Registration', value: 'Max 300' },
+      { label: 'Teacher Registration', value: 'Max 30' },
+      { label: 'Classes', value: 'Max 10' },
+      { label: 'Subjects', value: 'Unlimited' },
+      { label: 'Exams & Routines', value: 'Max 30' },
+      { label: 'All Fee Collections', value: 'Unlimited' },
+      { label: 'Notices', value: 'Max 50' },
+    ],
+  },
+  {
+    id: 'plan-enterprise',
+    tierIndex: '04',
+    name: 'Enterprise Annual',
+    tagline: 'High-capacity operations for large institutions',
+    price: 12500,
+    durationLabel: '1 Year',
+    durationDays: 365,
+    limits: {
+      students: 500,
+      staff: 50,
+      classes: 15,
+      subjects: null,
+      examsAndRoutines: 50,
+      feeCollectionPerType: null,
+      notices: 150,
+    },
+    highlights: [
+      { label: 'Student Registration', value: 'Max 500' },
+      { label: 'Teacher Registration', value: 'Max 50' },
+      { label: 'Classes', value: 'Max 15' },
+      { label: 'Subjects', value: 'Unlimited' },
+      { label: 'Exams & Routines', value: 'Max 50' },
+      { label: 'All Fee Collections', value: 'Unlimited' },
+      { label: 'Notices', value: 'Max 150' },
+    ],
+  },
+  {
+    id: 'plan-lifetime',
+    tierIndex: '05',
+    name: 'Lifetime Full Access',
+    tagline: 'Unrestricted permanent license with zero renewal fees',
+    price: 25000,
+    durationLabel: 'Lifetime',
+    durationDays: null,
+    isDarkTheme: true,
+    limits: {
+      students: null,
+      staff: null,
+      classes: null,
+      subjects: null,
+      examsAndRoutines: null,
+      feeCollectionPerType: null,
+      notices: null,
+    },
+    highlights: [
+      { label: 'Student Registration', value: 'Unlimited' },
+      { label: 'Teacher Registration', value: 'Unlimited' },
+      { label: 'Classes', value: 'Unlimited' },
+      { label: 'Subjects', value: 'Unlimited' },
+      { label: 'Exams & Routines', value: 'Unlimited' },
+      { label: 'All Fee Collections', value: 'Unlimited' },
+      { label: 'Notices', value: 'Unlimited' },
+    ],
+  },
+];
+
+export function getSubscriptionPlanById(id: SubscriptionPlanId): SubscriptionPlan {
+  return SUBSCRIPTION_PLANS.find((p) => p.id === id) || SUBSCRIPTION_PLANS[0];
+}
+
+export function createInitialSubscription(): ActiveSubscription {
+  const now = new Date();
+  const expires = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
+  return {
+    planId: 'plan-free-trial',
+    planName: 'Free Trial',
+    status: 'Trial',
+    startedAt: now.toISOString(),
+    expiresAt: expires.toISOString(),
+    amountPaid: 0,
+  };
+}

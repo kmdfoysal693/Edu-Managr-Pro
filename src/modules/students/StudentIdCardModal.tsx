@@ -113,7 +113,7 @@ export const StudentIdCardModal: React.FC<StudentIdCardModalProps> = ({ student,
           {/* FRONT SIDE */}
           {/* ======================================================== */}
           {(viewMode === 'both' || viewMode === 'front') && (
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center w-full max-w-[320px]">
               <span className="no-print text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-[#2563EB]" /> Front Side
               </span>
@@ -121,7 +121,7 @@ export const StudentIdCardModal: React.FC<StudentIdCardModalProps> = ({ student,
               {/* CR80 Standard ID Card Aspect Ratio Container (~54mm x 85.6mm, 320px x 515px) */}
               <div
                 id="student-id-front"
-                style={{ width: '320px', minHeight: '515px' }}
+                style={{ width: '100%', maxWidth: '320px', minHeight: '515px' }}
                 className="bg-white rounded-2xl shadow-xl border-2 border-slate-300 overflow-hidden relative flex flex-col justify-between text-slate-800 transition-all select-none"
               >
                 {/* Lanyard Hole Punch Slot indicator (hidden in print) */}
@@ -251,7 +251,7 @@ export const StudentIdCardModal: React.FC<StudentIdCardModalProps> = ({ student,
           {/* BACK SIDE (Unique QR Code) */}
           {/* ======================================================== */}
           {(viewMode === 'both' || viewMode === 'back') && (
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center w-full max-w-[320px]">
               <span className="no-print text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-[#2563EB]" /> Back Side (Unique QR)
               </span>
@@ -259,7 +259,7 @@ export const StudentIdCardModal: React.FC<StudentIdCardModalProps> = ({ student,
               {/* CR80 Standard ID Card Aspect Ratio Container */}
               <div
                 id="student-id-back"
-                style={{ width: '320px', minHeight: '515px' }}
+                style={{ width: '100%', maxWidth: '320px', minHeight: '515px' }}
                 className="bg-white rounded-2xl shadow-xl border-2 border-slate-300 overflow-hidden relative flex flex-col justify-between text-slate-800 transition-all select-none"
               >
                 {/* Lanyard Hole Punch Slot indicator (hidden in print) */}

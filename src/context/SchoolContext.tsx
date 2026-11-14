@@ -27,9 +27,19 @@ import {
   SubjectItem,
   ClassRoutineItem,
   SystemNotification,
+  SubscriptionPlanId,
+  SubscriptionPaymentMethod,
+  SubscriptionPlan,
+  ActiveSubscription,
+  SubscriptionOrder,
+  TrialRegistration,
 } from '../types';
 import { DEFAULT_SCHOOL_SETTINGS } from '../constants/school';
 import { translate } from '../i18n/translations';
+import {
+  createInitialSubscription,
+  getSubscriptionPlanById,
+} from '../data/subscriptionPlans';
 import {
   initialUserProfile,
   initialClasses,
@@ -80,7 +90,7 @@ interface SchoolContextType {
   t: (key: string, fallback?: string) => string;
 
   classes: SchoolClass[];
-  addClass: (cls: Omit<SchoolClass, 'id'>) => void;
+  addClass: (cls: Omit<SchoolClass, 'id'>) => boolean;
   updateClass: (id: string, cls: Partial<SchoolClass>) => void;
   deleteClass: (id: string) => void;
 
@@ -90,14 +100,14 @@ interface SchoolContextType {
   deleteDepartment: (id: string) => void;
 
   subjects: SubjectItem[];
-  addSubject: (sub: Omit<SubjectItem, 'id'>) => void;
+  addSubject: (sub: Omit<SubjectItem, 'id'>) => boolean;
   updateSubject: (id: string, sub: Partial<SubjectItem>) => void;
   deleteSubject: (id: string) => void;
   getSubjectsForClassAndGroup: (classIdOrName: string, group?: string) => SubjectItem[];
 
   classRoutines: ClassRoutineItem[];
-  addClassRoutine: (rtn: Omit<ClassRoutineItem, 'id'>) => void;
-  addClassRoutinesBatch: (items: Omit<ClassRoutineItem, 'id'>[]) => void;
+  addClassRoutine: (rtn: Omit<ClassRoutineItem, 'id'>) => boolean;
+  addClassRoutinesBatch: (items: Omit<ClassRoutineItem, 'id'>[]) => boolean;
   updateClassRoutine: (id: string, rtn: Partial<ClassRoutineItem>) => void;
   deleteClassRoutine: (id: string) => void;
   deleteClassRoutinesBatch: (ids: string[]) => void;
@@ -108,12 +118,12 @@ interface SchoolContextType {
   deleteShareholder: (id: string) => void;
 
   staff: StaffMember[];
-  addStaff: (s: Omit<StaffMember, 'id'>) => void;
+  addStaff: (s: Omit<StaffMember, 'id'>) => boolean;
   updateStaff: (id: string, s: Partial<StaffMember>) => void;
   deleteStaff: (id: string) => void;
 
   students: Student[];
-  addStudent: (std: Omit<Student, 'id'>) => void;
+  addStudent: (std: Omit<Student, 'id'>) => boolean;
   updateStudent: (id: string, std: Partial<Student>) => void;
   deleteStudent: (id: string) => void;
 
@@ -137,13 +147,13 @@ interface SchoolContextType {
   deleteDiaryEntry: (id: string) => void;
 
   exams: Exam[];
-  addExam: (ex: Omit<Exam, 'id'>) => void;
+  addExam: (ex: Omit<Exam, 'id'>) => boolean;
   updateExam: (id: string, ex: Partial<Exam>) => void;
   deleteExam: (id: string) => void;
 
   examRoutines: ExamRoutineItem[];
-  addExamRoutine: (rtn: Omit<ExamRoutineItem, 'id'>) => void;
-  addExamRoutinesBatch: (items: Omit<ExamRoutineItem, 'id'>[]) => void;
+  addExamRoutine: (rtn: Omit<ExamRoutineItem, 'id'>) => boolean;
+  addExamRoutinesBatch: (items: Omit<ExamRoutineItem, 'id'>[]) => boolean;
   updateExamRoutine: (id: string, rtn: Partial<ExamRoutineItem>) => void;
   deleteExamRoutine: (id: string) => void;
   deleteExamRoutinesBatch: (ids: string[]) => void;
@@ -153,12 +163,12 @@ interface SchoolContextType {
   deleteExamResult: (id: string) => void;
 
   transactions: FinancialTransaction[];
-  addTransaction: (tx: Omit<FinancialTransaction, 'id' | 'receiptNumber'>) => void;
+  addTransaction: (tx: Omit<FinancialTransaction, 'id' | 'receiptNumber'>) => boolean;
   updateTransaction: (id: string, tx: Partial<FinancialTransaction>) => void;
   deleteTransaction: (id: string) => void;
 
   notices: Notice[];
-  addNotice: (not: Omit<Notice, 'id'>) => void;
+  addNotice: (not: Omit<Notice, 'id'>) => boolean;
   updateNotice: (id: string, not: Partial<Notice>) => void;
   deleteNotice: (id: string) => void;
   togglePinNotice: (id: string) => void;
@@ -204,6 +214,31 @@ interface SchoolContextType {
   markNotificationAsRead: (id: string) => void;
   markAllNotificationsAsRead: () => void;
   clearNotifications: () => void;
+
+  // Subscription & Billing System
+  activeSubscription: ActiveSubscription;
+  activePlan: SubscriptionPlan;
+  subscriptionOrders: SubscriptionOrder[];
+  trialRegistrations: TrialRegistration[];
+  subscriptionUsage: {
+    students: number;
+    staff: number;
+    classes: number;
+    subjects: number;
+    exams: number;
+    routines: number;
+    notices: number;
+    feeByType: Record<string, number>;
+  };
+  purchaseSubscription: (payload: {
+    planId: SubscriptionPlanId;
+    paymentMethod: SubscriptionPaymentMethod;
+    accountNumber: string;
+    transactionId: string;
+    payerName: string;
+    payerPhone?: string;
+    bankName?: string;
+  }) => SubscriptionOrder;
 
   activityLogs: ActivityLog[];
   toasts: ToastMessage[];
@@ -276,6 +311,15 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [advanceSalaries, setAdvanceSalaries] = useState<AdvanceSalaryRecord[]>(() => loadFromStorage('advance_salaries', initialAdvanceSalaries));
   const [fundTransfers, setFundTransfers] = useState<FundTransferRecord[]>(() => loadFromStorage('fund_transfers', initialFundTransfers));
   const [notices, setNotices] = useState<Notice[]>(() => loadFromStorage('notices', initialNotices));
+  const [activeSubscription, setActiveSubscription] = useState<ActiveSubscription>(() =>
+    loadFromStorage('active_subscription', createInitialSubscription())
+  );
+  const [subscriptionOrders, setSubscriptionOrders] = useState<SubscriptionOrder[]>(() =>
+    loadFromStorage('subscription_orders', [])
+  );
+  const [trialRegistrations, setTrialRegistrations] = useState<TrialRegistration[]>(() =>
+    loadFromStorage('trial_registrations', [])
+  );
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => loadFromStorage('activity_logs', initialActivityLogs));
   const [notifications, setNotifications] = useState<SystemNotification[]>(() => loadFromStorage('system_notifications', initialNotifications));
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -303,6 +347,9 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => { saveToStorage('advance_salaries', advanceSalaries); }, [advanceSalaries]);
   useEffect(() => { saveToStorage('fund_transfers', fundTransfers); }, [fundTransfers]);
   useEffect(() => { saveToStorage('notices', notices); }, [notices]);
+  useEffect(() => { saveToStorage('active_subscription', activeSubscription); }, [activeSubscription]);
+  useEffect(() => { saveToStorage('subscription_orders', subscriptionOrders); }, [subscriptionOrders]);
+  useEffect(() => { saveToStorage('trial_registrations', trialRegistrations); }, [trialRegistrations]);
   useEffect(() => { saveToStorage('activity_logs', activityLogs); }, [activityLogs]);
   useEffect(() => { saveToStorage('system_notifications', notifications); }, [notifications]);
 
@@ -357,6 +404,8 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       actionRoute = 'finance-monthly-fee';
     } else if (lowerMod.includes('notice')) {
       actionRoute = 'notice-board';
+    } else if (lowerMod.includes('subscription')) {
+      actionRoute = 'subscription-plans';
     }
 
     const notifType: 'info' | 'success' | 'warning' | 'alert' =
@@ -454,12 +503,151 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return translate(key, language, fallback);
   };
 
+  const activePlan = getSubscriptionPlanById(activeSubscription.planId);
+
+  const uniqueClassRoutineGroups = new Set(
+    classRoutines.map((r) => `${r.classId}__${r.section}__${r.dayOfWeek}`)
+  );
+  const uniqueExamRoutineGroups = new Set(
+    examRoutines.map((r) => `${r.examId}__${r.classId}`)
+  );
+  const feeByType: Record<string, number> = {
+    'Exam Fee': transactions.filter((tx) => tx.feeType === 'Exam Fee').length,
+    'Monthly Fee': transactions.filter((tx) => tx.feeType === 'Monthly Fee').length,
+    Donation: transactions.filter((tx) => tx.feeType === 'Donation').length,
+    'Day Care Fee': transactions.filter((tx) => tx.feeType === 'Day Care Fee').length,
+    'Other Income': transactions.filter((tx) => tx.feeType === 'Other Income').length,
+  };
+
+  const subscriptionUsage = {
+    students: students.length,
+    staff: staff.length,
+    classes: classes.length,
+    subjects: subjects.length,
+    exams: exams.length,
+    routines: uniqueClassRoutineGroups.size + uniqueExamRoutineGroups.size,
+    notices: notices.length,
+    feeByType,
+  };
+
+  const checkSubscriptionActiveAndQuota = (
+    limitValue: number | null,
+    currentCount: number,
+    resourceLabel: string
+  ): boolean => {
+    if (activeSubscription.expiresAt && Date.now() > new Date(activeSubscription.expiresAt).getTime()) {
+      showToast(
+        'warning',
+        'Subscription Expired',
+        `Your ${activePlan.name} period has ended. Please renew or upgrade in Subscription Plans to add ${resourceLabel}.`
+      );
+      return false;
+    }
+    if (limitValue !== null && currentCount >= limitValue) {
+      showToast(
+        'warning',
+        `${activePlan.name} Limit Reached`,
+        `Your current plan allows maximum ${limitValue} ${resourceLabel}. Upgrade in Subscription Plans for higher capacity.`
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const purchaseSubscription = (payload: {
+    planId: SubscriptionPlanId;
+    paymentMethod: SubscriptionPaymentMethod;
+    accountNumber: string;
+    transactionId: string;
+    payerName: string;
+    payerPhone?: string;
+    bankName?: string;
+  }): SubscriptionOrder => {
+    const plan = getSubscriptionPlanById(payload.planId);
+    const now = new Date();
+    const expiresAt =
+      plan.durationDays !== null
+        ? new Date(now.getTime() + plan.durationDays * 24 * 60 * 60 * 1000).toISOString()
+        : null;
+    const isTrial = plan.id === 'plan-free-trial' || plan.price === 0;
+    const invoiceNum = `${isTrial ? 'TRL' : 'SUB'}-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const cleanPhone = (payload.payerPhone || payload.accountNumber || '').trim();
+
+    const newSubscription: ActiveSubscription = {
+      planId: plan.id,
+      planName: plan.name,
+      status: isTrial ? 'Trial' : 'Active',
+      startedAt: now.toISOString(),
+      expiresAt,
+      paymentMethod: isTrial ? 'Free Trial' : payload.paymentMethod,
+      transactionId: payload.transactionId,
+      amountPaid: plan.price,
+      subscriberName: payload.payerName,
+      subscriberPhone: cleanPhone || undefined,
+    };
+
+    const newOrder: SubscriptionOrder = {
+      id: 'sub-' + Date.now(),
+      invoiceNumber: invoiceNum,
+      planId: plan.id,
+      planName: plan.name,
+      amount: plan.price,
+      durationLabel: plan.durationLabel,
+      paymentMethod: isTrial ? 'Free Trial' : payload.paymentMethod,
+      accountNumber: cleanPhone || payload.accountNumber,
+      transactionId: payload.transactionId,
+      payerName: payload.payerName,
+      payerPhone: cleanPhone || undefined,
+      bankName: payload.bankName,
+      status: 'Completed',
+      paidAt: now.toISOString(),
+    };
+
+    if (isTrial) {
+      const trialEntry: TrialRegistration = {
+        id: 'trl-' + Date.now(),
+        referenceCode: invoiceNum,
+        subscriberName: payload.payerName,
+        subscriberPhone: cleanPhone,
+        planId: plan.id,
+        planName: plan.name,
+        startedAt: now.toISOString(),
+        expiresAt,
+      };
+      setTrialRegistrations((prev) => [trialEntry, ...prev]);
+    }
+
+    setActiveSubscription(newSubscription);
+    setSubscriptionOrders((prev) => [newOrder, ...prev]);
+
+    logActivity(
+      isTrial ? 'Free Trial Activated' : 'Subscription Activated',
+      isTrial
+        ? `Activated ${plan.name} (${plan.durationLabel}) for ${payload.payerName} (${cleanPhone}) — ${invoiceNum}`
+        : `Activated ${plan.name} (${plan.durationLabel}) via ${payload.paymentMethod} — BDT ${plan.price.toLocaleString('en-BD')} (${invoiceNum})`,
+      'Subscription'
+    );
+    showToast(
+      'success',
+      `${plan.name} Activated`,
+      isTrial
+        ? `Free Trial activated for ${payload.payerName} (${cleanPhone}). Reference ${invoiceNum} saved.`
+        : `Payment confirmed via ${payload.paymentMethod}. Invoice ${invoiceNum} has been issued.`
+    );
+
+    return newOrder;
+  };
+
   // Classes
-  const addClass = (data: Omit<SchoolClass, 'id'>) => {
+  const addClass = (data: Omit<SchoolClass, 'id'>): boolean => {
+    if (!checkSubscriptionActiveAndQuota(activePlan.limits.classes, classes.length, 'Classes')) {
+      return false;
+    }
     const newClass: SchoolClass = { ...data, id: 'cls-' + Date.now() };
     setClasses((prev) => [...prev, newClass]);
     logActivity('Class Created', `Added ${newClass.className} (${newClass.classCode})`, 'Class');
     showToast('success', 'Class Added', `${newClass.className} has been registered successfully.`);
+    return true;
   };
 
   const updateClass = (id: string, data: Partial<SchoolClass>) => {
@@ -501,7 +689,10 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   // Subjects
-  const addSubject = (data: Omit<SubjectItem, 'id'>) => {
+  const addSubject = (data: Omit<SubjectItem, 'id'>): boolean => {
+    if (!checkSubscriptionActiveAndQuota(activePlan.limits.subjects, subjects.length, 'Subjects')) {
+      return false;
+    }
     const newSub: SubjectItem = {
       ...data,
       id: 'sub-' + Date.now(),
@@ -510,6 +701,7 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setSubjects((prev) => [...prev, newSub]);
     logActivity('Subject Added', `Created subject: ${newSub.name} (${newSub.code})`, 'Class & Department');
     showToast('success', 'Subject Added', `Subject "${newSub.name}" added to curriculum.`);
+    return true;
   };
 
   const updateSubject = (id: string, data: Partial<SubjectItem>) => {
@@ -567,7 +759,16 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   // Academic Class Routines
-  const addClassRoutine = (data: Omit<ClassRoutineItem, 'id'>) => {
+  const addClassRoutine = (data: Omit<ClassRoutineItem, 'id'>): boolean => {
+    const groupKey = `${data.classId}__${data.section}__${data.dayOfWeek}`;
+    const isNewGroup = !uniqueClassRoutineGroups.has(groupKey);
+    const totalRoutines = uniqueClassRoutineGroups.size + uniqueExamRoutineGroups.size;
+    if (
+      isNewGroup &&
+      !checkSubscriptionActiveAndQuota(activePlan.limits.examsAndRoutines, totalRoutines, 'Routines')
+    ) {
+      return false;
+    }
     const newRtn: ClassRoutineItem = {
       ...data,
       id: 'crt-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
@@ -575,10 +776,21 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setClassRoutines((prev) => [...prev, newRtn]);
     logActivity('Class Routine Added', `Scheduled ${newRtn.subjectName} for ${newRtn.className} on ${newRtn.dayOfWeek}`, 'Class & Department');
     showToast('success', 'Class Routine Added', `${newRtn.subjectName} scheduled for ${newRtn.className}.`);
+    return true;
   };
 
-  const addClassRoutinesBatch = (items: Omit<ClassRoutineItem, 'id'>[]) => {
-    if (!items.length) return;
+  const addClassRoutinesBatch = (items: Omit<ClassRoutineItem, 'id'>[]): boolean => {
+    if (!items.length) return false;
+    const firstItem = items[0];
+    const groupKey = `${firstItem.classId}__${firstItem.section}__${firstItem.dayOfWeek}`;
+    const isNewGroup = !uniqueClassRoutineGroups.has(groupKey);
+    const totalRoutines = uniqueClassRoutineGroups.size + uniqueExamRoutineGroups.size;
+    if (
+      isNewGroup &&
+      !checkSubscriptionActiveAndQuota(activePlan.limits.examsAndRoutines, totalRoutines, 'Routines')
+    ) {
+      return false;
+    }
     const baseId = Date.now();
     const newItems: ClassRoutineItem[] = items.map((data, index) => ({
       ...data,
@@ -596,6 +808,7 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       'Daily Routine Created',
       `Successfully scheduled ${newItems.length} periods for ${first.className}.`
     );
+    return true;
   };
 
   const updateClassRoutine = (id: string, data: Partial<ClassRoutineItem>) => {
@@ -640,11 +853,15 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   // Staff
-  const addStaff = (data: Omit<StaffMember, 'id'>) => {
+  const addStaff = (data: Omit<StaffMember, 'id'>): boolean => {
+    if (!checkSubscriptionActiveAndQuota(activePlan.limits.staff, staff.length, 'Teachers / Staff')) {
+      return false;
+    }
     const newStaff: StaffMember = { ...data, id: 'stf-' + Date.now() };
     setStaff((prev) => [newStaff, ...prev]);
     logActivity('Staff Recruited', `Added ${newStaff.fullName} as ${newStaff.designation}`, 'Staff');
     showToast('success', 'Staff Member Added', `${newStaff.fullName} registered.`);
+    return true;
   };
 
   const updateStaff = (id: string, data: Partial<StaffMember>) => {
@@ -661,11 +878,15 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   // Students
-  const addStudent = (data: Omit<Student, 'id'>) => {
+  const addStudent = (data: Omit<Student, 'id'>): boolean => {
+    if (!checkSubscriptionActiveAndQuota(activePlan.limits.students, students.length, 'Students')) {
+      return false;
+    }
     const newStudent: Student = { ...data, id: 'std-' + Date.now() };
     setStudents((prev) => [newStudent, ...prev]);
     logActivity('Student Enrolled', `Admitted ${newStudent.fullName} to ${newStudent.className}`, 'Student');
     showToast('success', 'Student Enrolled', `${newStudent.fullName} has been admitted.`);
+    return true;
   };
 
   const updateStudent = (id: string, data: Partial<Student>) => {
@@ -851,11 +1072,15 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   // Exams
-  const addExam = (data: Omit<Exam, 'id'>) => {
+  const addExam = (data: Omit<Exam, 'id'>): boolean => {
+    if (!checkSubscriptionActiveAndQuota(activePlan.limits.examsAndRoutines, exams.length, 'Exams')) {
+      return false;
+    }
     const newEx: Exam = { ...data, id: 'ex-' + Date.now() };
     setExams((prev) => [newEx, ...prev]);
     logActivity('Exam Created', `Created examination: ${newEx.name}`, 'Exam & Result');
     showToast('success', 'Exam Created', `${newEx.name} scheduled.`);
+    return true;
   };
 
   const updateExam = (id: string, data: Partial<Exam>) => {
@@ -869,15 +1094,35 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   // Routines
-  const addExamRoutine = (data: Omit<ExamRoutineItem, 'id'>) => {
+  const addExamRoutine = (data: Omit<ExamRoutineItem, 'id'>): boolean => {
+    const groupKey = `${data.examId}__${data.classId}`;
+    const isNewGroup = !uniqueExamRoutineGroups.has(groupKey);
+    const totalRoutines = uniqueClassRoutineGroups.size + uniqueExamRoutineGroups.size;
+    if (
+      isNewGroup &&
+      !checkSubscriptionActiveAndQuota(activePlan.limits.examsAndRoutines, totalRoutines, 'Routines')
+    ) {
+      return false;
+    }
     const newRtn: ExamRoutineItem = { ...data, id: 'rtn-' + Date.now() };
     setExamRoutines((prev) => [...prev, newRtn]);
     logActivity('Routine Added', `Scheduled ${newRtn.subject} on ${newRtn.examDate}`, 'Exam & Result');
     showToast('success', 'Schedule Added', `Exam schedule for ${newRtn.subject} added.`);
+    return true;
   };
 
-  const addExamRoutinesBatch = (items: Omit<ExamRoutineItem, 'id'>[]) => {
-    if (!items.length) return;
+  const addExamRoutinesBatch = (items: Omit<ExamRoutineItem, 'id'>[]): boolean => {
+    if (!items.length) return false;
+    const firstItem = items[0];
+    const groupKey = `${firstItem.examId}__${firstItem.classId}`;
+    const isNewGroup = !uniqueExamRoutineGroups.has(groupKey);
+    const totalRoutines = uniqueClassRoutineGroups.size + uniqueExamRoutineGroups.size;
+    if (
+      isNewGroup &&
+      !checkSubscriptionActiveAndQuota(activePlan.limits.examsAndRoutines, totalRoutines, 'Routines')
+    ) {
+      return false;
+    }
     const baseId = Date.now();
     const newItems: ExamRoutineItem[] = items.map((data, index) => ({
       ...data,
@@ -895,6 +1140,7 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       'Class Routine Created',
       `Successfully scheduled ${newItems.length} subjects for ${first.className}.`
     );
+    return true;
   };
 
   const updateExamRoutine = (id: string, data: Partial<ExamRoutineItem>) => {
@@ -932,7 +1178,20 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   // Finances
-  const addTransaction = (data: Omit<FinancialTransaction, 'id' | 'receiptNumber'>) => {
+  const addTransaction = (data: Omit<FinancialTransaction, 'id' | 'receiptNumber'>): boolean => {
+    const feeCollectionTypes = ['Exam Fee', 'Monthly Fee', 'Donation', 'Day Care Fee', 'Other Income'];
+    if (feeCollectionTypes.includes(data.feeType)) {
+      const existingCount = transactions.filter((t) => t.feeType === data.feeType).length;
+      if (
+        !checkSubscriptionActiveAndQuota(
+          activePlan.limits.feeCollectionPerType,
+          existingCount,
+          `${data.feeType} collections`
+        )
+      ) {
+        return false;
+      }
+    }
     const receiptNum = (data.feeType === 'School Expense' ? 'EXP-' : 'RCP-') + '2026-' + Math.floor(1000 + Math.random() * 9000);
     const newTx: FinancialTransaction = {
       ...data,
@@ -942,6 +1201,7 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setTransactions((prev) => [newTx, ...prev]);
     logActivity('Transaction Recorded', `${newTx.feeType}: BDT ${newTx.amount.toLocaleString()} for ${newTx.partyName}`, 'Finances');
     showToast('success', 'Payment / Transaction Logged', `Receipt ${receiptNum} generated for BDT ${newTx.amount.toLocaleString()}.`);
+    return true;
   };
 
   const updateTransaction = (id: string, data: Partial<FinancialTransaction>) => {
@@ -1230,12 +1490,16 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   // Notices
-  const addNotice = (data: Omit<Notice, 'id'>) => {
+  const addNotice = (data: Omit<Notice, 'id'>): boolean => {
+    if (!checkSubscriptionActiveAndQuota(activePlan.limits.notices, notices.length, 'Notices')) {
+      return false;
+    }
     const nowIso = new Date().toISOString();
     const newNotice: Notice = { ...data, id: 'not-' + Date.now(), updatedAt: nowIso };
     setNotices((prev) => [newNotice, ...prev]);
     logActivity('Notice Published', `Published: ${newNotice.title}`, 'Notice');
     showToast('success', 'Notice Published', `Notice "${newNotice.title}" has been published.`);
+    return true;
   };
 
   const updateNotice = (id: string, data: Partial<Notice>) => {
@@ -1337,6 +1601,9 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setAdvanceSalaries(initialAdvanceSalaries);
     setFundTransfers(initialFundTransfers);
     setNotices(initialNotices);
+    setActiveSubscription(createInitialSubscription());
+    setSubscriptionOrders([]);
+    setTrialRegistrations([]);
     setActivityLogs(initialActivityLogs);
     setNotifications(initialNotifications);
     showToast('success', 'System Reset', 'All workspace data has been cleared to an empty state.');
@@ -1475,6 +1742,12 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         clearNotifications,
 
         activityLogs,
+        activeSubscription,
+        activePlan,
+        subscriptionOrders,
+        trialRegistrations,
+        subscriptionUsage,
+        purchaseSubscription,
         toasts,
         showToast,
         removeToast,

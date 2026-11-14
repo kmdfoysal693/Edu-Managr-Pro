@@ -47,23 +47,23 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto modal-backdrop-print-reset">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-6 overflow-y-auto modal-backdrop-print-reset">
       <div
         className="no-print fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
         onClick={onClose}
       />
       <div
-        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-white rounded-2xl shadow-2xl border border-slate-200 z-10 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 modal-content-print-reset`}
+        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-white rounded-2xl shadow-2xl border border-slate-200 z-10 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh] animate-in zoom-in-95 duration-200 modal-content-print-reset`}
       >
         {/* Modal Header */}
-        <div className="no-print flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-          <div>
-            <h3 className="text-lg font-bold text-[#172554]">{title}</h3>
-            {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+        <div className="no-print flex items-center justify-between gap-3 px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-100 bg-slate-50/50">
+          <div className="min-w-0">
+            <h3 className="text-base sm:text-lg font-bold text-[#172554] truncate">{title}</h3>
+            {subtitle && <p className="text-xs text-slate-500 mt-0.5 truncate">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer shrink-0"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
@@ -71,10 +71,10 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-4 modal-body-print-reset">{children}</div>
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 modal-body-print-reset">{children}</div>
 
         {/* Modal Footer */}
-        {footer && <div className="no-print px-6 py-3.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-end gap-3">{footer}</div>}
+        {footer && <div className="no-print px-4 py-3 sm:px-6 sm:py-3.5 bg-slate-50/80 border-t border-slate-100 flex flex-wrap items-center justify-end gap-2.5 sm:gap-3">{footer}</div>}
       </div>
     </div>
   );

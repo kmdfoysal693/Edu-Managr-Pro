@@ -661,7 +661,7 @@ export const ShareholderList: React.FC = () => {
               </div>
 
               {/* 6. Signatures & Official Seals */}
-              <div className="pt-8 border-t border-slate-200 grid grid-cols-3 gap-4 text-center text-xs">
+              <div className="pt-8 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-4 text-center text-xs">
                 <div>
                   <div className="h-10 border-b border-slate-400" />
                   <p className="font-bold text-[#172554] mt-1.5">Senior Accounts Officer</p>

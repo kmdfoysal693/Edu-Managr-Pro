@@ -415,3 +415,82 @@ export interface SystemNotification {
   actionRoute?: string;
 }
 
+export type SubscriptionPlanId =
+  | 'plan-free-trial'
+  | 'plan-starter'
+  | 'plan-growth'
+  | 'plan-enterprise'
+  | 'plan-lifetime';
+
+export type SubscriptionPaymentMethod =
+  | 'bKash'
+  | 'Rocket'
+  | 'Nagad'
+  | 'Bank Transfer'
+  | 'Free Trial';
+
+export interface SubscriptionQuotaLimits {
+  students: number | null; // null = Unlimited
+  staff: number | null;
+  classes: number | null;
+  subjects: number | null;
+  examsAndRoutines: number | null;
+  feeCollectionPerType: number | null;
+  notices: number | null;
+}
+
+export interface SubscriptionPlan {
+  id: SubscriptionPlanId;
+  tierIndex: string;
+  name: string;
+  tagline: string;
+  price: number; // In BDT
+  durationLabel: string;
+  durationDays: number | null; // null = Lifetime
+  recommended?: boolean;
+  isDarkTheme?: boolean;
+  limits: SubscriptionQuotaLimits;
+  highlights: Array<{ label: string; value: string }>;
+}
+
+export interface ActiveSubscription {
+  planId: SubscriptionPlanId;
+  planName: string;
+  status: 'Trial' | 'Active';
+  startedAt: string; // ISO string
+  expiresAt: string | null; // ISO string or null for Lifetime
+  paymentMethod?: SubscriptionPaymentMethod;
+  transactionId?: string;
+  amountPaid: number;
+  subscriberName?: string;
+  subscriberPhone?: string;
+}
+
+export interface SubscriptionOrder {
+  id: string;
+  invoiceNumber: string;
+  planId: SubscriptionPlanId;
+  planName: string;
+  amount: number;
+  durationLabel: string;
+  paymentMethod: SubscriptionPaymentMethod;
+  accountNumber: string;
+  transactionId: string;
+  payerName: string;
+  payerPhone?: string;
+  bankName?: string;
+  status: 'Completed';
+  paidAt: string;
+}
+
+export interface TrialRegistration {
+  id: string;
+  referenceCode: string;
+  subscriberName: string;
+  subscriberPhone: string;
+  planId: SubscriptionPlanId;
+  planName: string;
+  startedAt: string;
+  expiresAt: string | null;
+}
+

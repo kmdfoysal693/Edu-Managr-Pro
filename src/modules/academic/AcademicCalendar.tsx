@@ -180,7 +180,7 @@ export const AcademicCalendar: React.FC = () => {
         /* Calendar View */
         <Card noPadding>
           {/* Calendar Header Navigation */}
-          <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div className="px-4 sm:px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h3 className="text-base font-bold text-[#172554]">{monthName}</h3>
             <div className="flex items-center gap-2">
               <button
@@ -209,72 +209,76 @@ export const AcademicCalendar: React.FC = () => {
             </div>
           </div>
 
-          {/* Days of Week Header */}
-          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-xs font-bold text-slate-500 py-2.5">
-            <div>SUN</div>
-            <div>MON</div>
-            <div>TUE</div>
-            <div>WED</div>
-            <div>THU</div>
-            <div>FRI</div>
-            <div>SAT</div>
-          </div>
+          <div className="overflow-x-auto">
+            <div className="min-w-[640px]">
+              {/* Days of Week Header */}
+              <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-xs font-bold text-slate-500 py-2.5">
+                <div>SUN</div>
+                <div>MON</div>
+                <div>TUE</div>
+                <div>WED</div>
+                <div>THU</div>
+                <div>FRI</div>
+                <div>SAT</div>
+              </div>
 
-          {/* Day Grid */}
-          <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 bg-slate-100">
-            {/* Blank leading days */}
-            {Array.from({ length: firstDayIndex }).map((_, i) => (
-              <div key={`blank-${i}`} className="min-h-[105px] bg-slate-50/60 p-2" />
-            ))}
+              {/* Day Grid */}
+              <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 bg-slate-100">
+                {/* Blank leading days */}
+                {Array.from({ length: firstDayIndex }).map((_, i) => (
+                  <div key={`blank-${i}`} className="min-h-[105px] bg-slate-50/60 p-2" />
+                ))}
 
-            {/* Days in Month */}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const dayNum = i + 1;
-              const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-              const dayEvents = filteredEvents.filter((e) => {
-                return dateStr >= e.startDate && dateStr <= e.endDate;
-              });
+                {/* Days in Month */}
+                {Array.from({ length: daysInMonth }).map((_, i) => {
+                  const dayNum = i + 1;
+                  const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                  const dayEvents = filteredEvents.filter((e) => {
+                    return dateStr >= e.startDate && dateStr <= e.endDate;
+                  });
 
-              const isToday = dateStr === todayStr;
+                  const isToday = dateStr === todayStr;
 
-              return (
-                <div
-                  key={`day-${dayNum}`}
-                  className={`min-h-[105px] bg-white p-2 transition-colors hover:bg-blue-50/20 flex flex-col ${
-                    isToday ? 'ring-2 ring-blue-500 ring-inset' : ''
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span
-                      className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center ${
-                        isToday ? 'bg-blue-600 text-white' : 'text-slate-700'
+                  return (
+                    <div
+                      key={`day-${dayNum}`}
+                      className={`min-h-[105px] bg-white p-2 transition-colors hover:bg-blue-50/20 flex flex-col ${
+                        isToday ? 'ring-2 ring-blue-500 ring-inset' : ''
                       }`}
                     >
-                      {dayNum}
-                    </span>
-                    {dayEvents.length > 0 && (
-                      <span className="text-[10px] text-slate-400 font-medium">{dayEvents.length} event</span>
-                    )}
-                  </div>
-
-                  <div className="flex-1 space-y-1 overflow-hidden">
-                    {dayEvents.map((evt) => {
-                      const theme = getCategoryTheme(evt.category);
-                      return (
-                        <div
-                          key={evt.id}
-                          onClick={() => setSelectedEvent(evt)}
-                          className={`px-1.5 py-1 rounded text-[10px] font-semibold truncate cursor-pointer transition-transform hover:scale-[1.02] ${theme.bg} ${theme.text}`}
-                          title={`${evt.title} (${evt.category})`}
+                      <div className="flex items-center justify-between mb-1">
+                        <span
+                          className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center ${
+                            isToday ? 'bg-blue-600 text-white' : 'text-slate-700'
+                          }`}
                         >
-                          {evt.title}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+                          {dayNum}
+                        </span>
+                        {dayEvents.length > 0 && (
+                          <span className="text-[10px] text-slate-400 font-medium">{dayEvents.length} event</span>
+                        )}
+                      </div>
+
+                      <div className="flex-1 space-y-1 overflow-hidden">
+                        {dayEvents.map((evt) => {
+                          const theme = getCategoryTheme(evt.category);
+                          return (
+                            <div
+                              key={evt.id}
+                              onClick={() => setSelectedEvent(evt)}
+                              className={`px-1.5 py-1 rounded text-[10px] font-semibold truncate cursor-pointer transition-transform hover:scale-[1.02] ${theme.bg} ${theme.text}`}
+                              title={`${evt.title} (${evt.category})`}
+                            >
+                              {evt.title}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </Card>
       ) : (

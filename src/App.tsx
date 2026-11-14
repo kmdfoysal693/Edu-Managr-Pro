@@ -45,6 +45,7 @@ import { TeacherSalary } from './modules/finances/TeacherSalary';
 import { FundTransfer } from './modules/finances/FundTransfer';
 import { NoticeNew } from './modules/notices/NoticeNew';
 import { NoticeBoard } from './modules/notices/NoticeBoard';
+import { SubscriptionPlans } from './modules/subscription/SubscriptionPlans';
 
 const MainLayout: React.FC = () => {
   const { currentRoute, isSidebarCollapsed } = useSchool();
@@ -141,13 +142,17 @@ const MainLayout: React.FC = () => {
       case 'notice-board':
         return <NoticeBoard />;
 
+      // Subscription
+      case 'subscription-plans':
+        return <SubscriptionPlans />;
+
       default:
         return <DashboardOverview />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
+    <div className="min-h-dvh bg-[#F8FAFC] flex overflow-x-hidden">
       {/* Sidebar Navigation */}
       <Sidebar />
 
@@ -161,7 +166,7 @@ const MainLayout: React.FC = () => {
         <Header />
 
         {/* Dynamic Route Content */}
-        <main className="flex-1 mt-16 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto animate-in fade-in-50 duration-150">
+        <main className="flex-1 mt-[calc(4rem+env(safe-area-inset-top))] p-3 sm:p-6 lg:p-8 pb-[calc(1.25rem+env(safe-area-inset-bottom))] max-w-7xl w-full mx-auto overflow-x-hidden animate-in fade-in-50 duration-150">
           {renderModule()}
         </main>
       </div>

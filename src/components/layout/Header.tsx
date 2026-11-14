@@ -313,45 +313,47 @@ export const Header: React.FC = () => {
   return (
     <>
       <header
-        className={`fixed top-0 right-0 z-20 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/90 transition-all duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 z-20 min-h-16 pt-[env(safe-area-inset-top)] bg-white/95 backdrop-blur-md border-b border-slate-200/90 transition-all duration-300 ease-in-out ${
           isSidebarCollapsed ? 'left-0 md:left-20' : 'left-0 md:left-64'
         }`}
       >
-        <div className="h-full px-4 sm:px-6 flex items-center justify-between gap-4">
+        <div className="h-16 px-2.5 sm:px-6 flex items-center justify-between gap-2 sm:gap-4">
           {/* Left: Mobile Trigger + Breadcrumb */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="md:hidden p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 cursor-pointer"
+              className="md:hidden p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 cursor-pointer shrink-0"
+              aria-label="Open navigation menu"
             >
               <Menu className="w-5 h-5" />
             </button>
 
             <div className="min-w-0">
-              <nav className="flex items-center gap-2 text-sm text-slate-500 font-semibold">
-                <span className="hover:text-blue-600 transition-colors cursor-pointer" onClick={() => setCurrentRoute('dashboard-overview')}>
+              <nav className="hidden sm:flex items-center gap-2 text-sm text-slate-500 font-semibold">
+                <span className="hover:text-blue-600 transition-colors cursor-pointer truncate" onClick={() => setCurrentRoute('dashboard-overview')}>
                   {schoolSettings.schoolName}
                 </span>
                 <span className="text-slate-300">/</span>
-                <span className="text-slate-600">{currentParentTitle}</span>
+                <span className="text-slate-600 truncate">{currentParentTitle}</span>
               </nav>
-              <h1 className="text-lg sm:text-2xl font-black text-[#172554] tracking-tight leading-tight truncate">
+              <h1 className="text-sm sm:text-xl lg:text-2xl font-black text-[#172554] tracking-tight leading-tight truncate">
                 {currentSubTitle}
               </h1>
             </div>
           </div>
 
           {/* Right Toolbar */}
-          <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2.5 lg:gap-3.5 shrink-0">
             {/* Quick Search Button */}
             <div className="relative">
               <button
                 onClick={() => setIsSearchOpen(true)}
-                className="flex items-center gap-2.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 transition-colors cursor-pointer group"
+                className="flex items-center gap-2 px-2.5 py-2 sm:px-3.5 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 transition-colors cursor-pointer group"
+                aria-label="Quick Search"
               >
                 <Search className="w-4 h-4 text-slate-400 group-hover:text-slate-700" />
                 <span className="hidden sm:inline">{t('action.search', 'Search...')}</span>
-                <kbd className="hidden sm:inline-block px-2 py-0.5 text-xs font-mono font-bold text-slate-500 bg-white border border-slate-200 rounded-md shadow-2xs">
+                <kbd className="hidden md:inline-block px-2 py-0.5 text-xs font-mono font-bold text-slate-500 bg-white border border-slate-200 rounded-md shadow-2xs">
                   Ctrl K
                 </kbd>
               </button>
@@ -373,12 +375,13 @@ export const Header: React.FC = () => {
             <div className="relative" ref={notificationMenuRef}>
               <button
                 onClick={() => setIsNotificationOpen((prev) => !prev)}
-                className="relative p-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="relative p-2 sm:p-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
                 title="Live Time Notifications"
+                aria-label="Notifications"
               >
                 <Bell className="w-5 h-5" />
                 {unreadNotificationsCount > 0 ? (
-                  <span className="absolute -top-1 -right-1 px-1.5 py-0.2 min-w-[20px] text-center text-[11px] font-extrabold bg-rose-600 text-white rounded-full ring-2 ring-white animate-pulse">
+                  <span className="absolute -top-0.5 -right-0.5 px-1.5 py-0.2 min-w-[18px] text-center text-[10px] font-extrabold bg-rose-600 text-white rounded-full ring-2 ring-white animate-pulse">
                     {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
                   </span>
                 ) : (
@@ -389,7 +392,7 @@ export const Header: React.FC = () => {
               </button>
 
               {isNotificationOpen && (
-                <div className="absolute right-0 mt-2 w-88 sm:w-[420px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150">
+                <div className="fixed left-3 right-3 top-[calc(4.25rem+env(safe-area-inset-top))] sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[420px] max-w-[calc(100vw-1.5rem)] bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150">
                   {/* Dropdown Header */}
                   <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/90 flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -592,7 +595,7 @@ export const Header: React.FC = () => {
               </button>
 
               {isProfileOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150">
+                <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-1.5rem)] bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150">
                   {/* Dropdown Header */}
                   <div className="p-4 border-b border-slate-100 bg-slate-50/50">
                     <div className="flex items-center gap-3">
@@ -679,7 +682,7 @@ export const Header: React.FC = () => {
 
       {/* Global Search Modal */}
       {isSearchOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 sm:pt-20 p-3 sm:p-4">
           <div
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
             onClick={() => setIsSearchOpen(false)}

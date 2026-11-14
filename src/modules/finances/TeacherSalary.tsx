@@ -1804,33 +1804,33 @@ export const TeacherSalary: React.FC = () => {
 
             {/* Bottom Official Signatures Section */}
             <div className="mt-16 pt-8 border-t border-slate-200">
-              <div className="grid grid-cols-4 gap-4 text-center">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-4 text-center">
                 <div className="flex flex-col items-center">
-                  <div className="w-32 border-b border-slate-400 mb-2"></div>
+                  <div className="w-28 sm:w-32 border-b border-slate-400 mb-2"></div>
                   <p className="text-xs font-bold text-slate-800">Senior Accounts Officer</p>
                   <p className="text-[10px] text-slate-400">Billing & Verification</p>
                 </div>
 
                 <div className="flex flex-col items-center">
-                  <div className="w-32 border-b border-slate-400 mb-2"></div>
+                  <div className="w-28 sm:w-32 border-b border-slate-400 mb-2"></div>
                   <p className="text-xs font-bold text-slate-800">Head Accountant / Bursar</p>
                   <p className="text-[10px] text-slate-400">Finance Controller</p>
                 </div>
 
                 <div className="flex flex-col items-center">
-                  <div className="w-32 border-b border-slate-400 mb-2"></div>
+                  <div className="w-28 sm:w-32 border-b border-slate-400 mb-2"></div>
                   <p className="text-xs font-bold text-slate-800">Principal</p>
                   <p className="text-[10px] text-slate-400">{schoolSettings.schoolName}</p>
                 </div>
 
                 <div className="flex flex-col items-center">
-                  <div className="w-32 border-b border-slate-400 mb-2"></div>
+                  <div className="w-28 sm:w-32 border-b border-slate-400 mb-2"></div>
                   <p className="text-xs font-bold text-slate-800">Chairman, Governing Body</p>
                   <p className="text-[10px] text-slate-400">Final Sanction & Seal</p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between mt-8 text-[10px] text-slate-400">
+              <div className="flex flex-wrap items-center justify-between gap-2 mt-8 text-[10px] text-slate-400">
                 <p>System Generated via EduManage SMS • Certified Accurate</p>
                 <p>Official School Seal Area: [ SEAL ]</p>
                 <p>Page 1 of 1</p>

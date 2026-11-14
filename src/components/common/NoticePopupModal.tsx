@@ -95,7 +95,7 @@ export const NoticePopupModal: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-6 overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="notice-popup-title"
@@ -107,20 +107,20 @@ export const NoticePopupModal: React.FC = () => {
       />
 
       {/* Popup Card */}
-      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 z-10 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 z-10 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh] animate-in zoom-in-95 duration-200">
         {/* Top-Right Corner Cross (X) Button */}
         <button
           type="button"
           onClick={closeNoticePopup}
           aria-label="Close Notice Popup"
           title="Close"
-          className="absolute top-3.5 right-3.5 z-20 w-9 h-9 rounded-full bg-white/15 hover:bg-rose-500 text-white flex items-center justify-center transition-colors cursor-pointer shadow-xs border border-white/20"
+          className="absolute top-3 right-3 sm:top-3.5 sm:right-3.5 z-20 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/15 hover:bg-rose-500 text-white flex items-center justify-center transition-colors cursor-pointer shadow-xs border border-white/20"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
 
         {/* Header Banner */}
-        <div className="bg-gradient-to-r from-[#172554] via-[#1E3A8A] to-[#2563EB] text-white px-6 py-4 pr-14">
+        <div className="bg-gradient-to-r from-[#172554] via-[#1E3A8A] to-[#2563EB] text-white px-4 py-3.5 pr-12 sm:px-6 sm:py-4 sm:pr-14">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-white/95 p-1 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
               <img
@@ -150,7 +150,7 @@ export const NoticePopupModal: React.FC = () => {
 
         {/* Popup Body */}
         {currentNotice ? (
-          <div className="p-6 overflow-y-auto space-y-4">
+          <div className="p-4 sm:p-6 overflow-y-auto space-y-4">
             {/* Badges & Dates */}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
@@ -262,7 +262,7 @@ export const NoticePopupModal: React.FC = () => {
         )}
 
         {/* Footer */}
-        <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-2">
+        <div className="px-4 py-3 sm:px-6 sm:py-3.5 bg-slate-50 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-2">
           <Button
             type="button"
             variant="outline"

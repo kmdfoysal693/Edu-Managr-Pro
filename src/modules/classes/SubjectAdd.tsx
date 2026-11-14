@@ -155,7 +155,7 @@ export const SubjectAdd: React.FC = () => {
     const selectedClasses = classes.filter((c) => selectedClassIds.includes(c.id));
     const selectedDept = departments.find((d) => d.id === departmentId);
 
-    addSubject({
+    const added = addSubject({
       name: name.trim(),
       bengaliName: bengaliName.trim() || undefined,
       code: code.trim().toUpperCase(),
@@ -174,7 +174,9 @@ export const SubjectAdd: React.FC = () => {
     });
 
     // Navigate to Subject List
-    setCurrentRoute('subject-list');
+    if (added) {
+      setCurrentRoute('subject-list');
+    }
   };
 
   return (

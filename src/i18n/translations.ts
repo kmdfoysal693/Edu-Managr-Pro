@@ -215,6 +215,7 @@ const enTranslations: Record<string, string> = {
     'nav.exam': 'Exam & Results',
     'nav.finances': 'Finances & Accounts',
     'nav.notices': 'Notices & Circulars',
+    'nav.subscription': 'Subscription',
 
     // Navigation Subitems
     'dashboard-overview': 'Dashboard Overview',
@@ -250,6 +251,7 @@ const enTranslations: Record<string, string> = {
     'finance-others': 'Other Income & Expenses',
     'notice-new': 'Publish Notice',
     'notice-board': 'Notice Board',
+    'subscription-plans': 'Subscription Plans',
 
     // Common Actions
     'action.save': 'Save Changes',
@@ -384,6 +386,7 @@ const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
     'nav.exam': 'परीक्षा एवं परिणाम',
     'nav.finances': 'वित्त एवं लेखा',
     'nav.notices': 'सूचनाएं एवं परिपत्र',
+    'nav.subscription': 'सदस्यता (Subscription)',
 
     // Navigation Subitems
     'dashboard-overview': 'डैशबोर्ड अवलोकन',
@@ -419,6 +422,7 @@ const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
     'finance-others': 'अन्य आय एवं व्यय',
     'notice-new': 'नई सूचना प्रकाशित करें',
     'notice-board': 'सूचना पट्ट',
+    'subscription-plans': 'सदस्यता योजनाएं (Plans)',
 
     // Common Actions
     'action.save': 'परिवर्तन सहेजें',

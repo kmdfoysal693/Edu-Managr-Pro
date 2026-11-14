@@ -14,6 +14,7 @@ export const Sidebar: React.FC = () => {
     notices,
     transactions,
     schoolSettings,
+    activePlan,
     t,
   } = useSchool();
 
@@ -71,7 +72,10 @@ export const Sidebar: React.FC = () => {
       {/* Brand Header */}
       <div className="h-16 px-4 flex items-center justify-between border-b border-slate-200/90 bg-white shrink-0">
         <div
-          onClick={() => setCurrentRoute('dashboard-overview')}
+          onClick={() => {
+            setCurrentRoute('dashboard-overview');
+            setIsMobileSidebarOpen(false);
+          }}
           className="flex items-center gap-2.5 cursor-pointer overflow-hidden"
         >
           <div className="w-10 h-10 rounded-xl bg-white p-0.5 border border-slate-200 shadow-xs flex items-center justify-center shrink-0 overflow-hidden">
@@ -215,12 +219,22 @@ export const Sidebar: React.FC = () => {
 
       {/* Footer System Info */}
       {!isSidebarCollapsed && (
-        <div className="p-3.5 border-t border-slate-200/90 bg-slate-50/70 shrink-0">
+        <div className="p-3.5 border-t border-slate-200/90 bg-slate-50/70 shrink-0 space-y-2">
+          <button
+            type="button"
+            onClick={() => handleSubItemClick('subscription-plans')}
+            className="w-full flex items-center justify-between text-xs text-slate-700 hover:text-[#2563EB] transition-colors cursor-pointer"
+          >
+            <span className="font-semibold truncate">Plan: {activePlan.name}</span>
+            <span className="font-mono font-bold text-[#2563EB] shrink-0">
+              {activePlan.durationLabel}
+            </span>
+          </button>
           <div className="flex items-center justify-between text-xs text-slate-500">
             <span className="font-semibold">System Version</span>
             <span className="px-2 py-0.5 bg-slate-200/70 rounded text-xs font-mono font-bold text-slate-700">v3.4.0 (2026)</span>
           </div>
-          <p className="text-xs text-slate-400 mt-1 truncate">Currency: Bangladeshi Taka (BDT)</p>
+          <p className="text-xs text-slate-400 truncate">Currency: Bangladeshi Taka (BDT)</p>
         </div>
       )}
     </div>
@@ -244,7 +258,7 @@ export const Sidebar: React.FC = () => {
             className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
             onClick={() => setIsMobileSidebarOpen(false)}
           />
-          <div className="relative w-72 max-w-[85vw] h-full shadow-2xl z-10 animate-in slide-in-from-left duration-200">
+          <div className="relative w-72 max-w-[85vw] h-full shadow-2xl z-10 animate-in slide-in-from-left duration-200 bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
             {sidebarContent}
           </div>
         </div>

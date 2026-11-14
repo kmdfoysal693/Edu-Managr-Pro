@@ -162,7 +162,7 @@ export const StudentAdd: React.FC = () => {
       .filter((s) => selectedSubjectIds.includes(s.id))
       .map((s) => `${s.name} (${s.code})`);
 
-    addStudent({
+    const added = addStudent({
       fullName: formData.fullName,
       photo: formData.photo || schoolSettings.logo,
       studentId: formData.studentId,
@@ -189,7 +189,9 @@ export const StudentAdd: React.FC = () => {
       group: isSecondaryGrade ? academicGroup : 'General',
       assignedSubjects: assignedNames,
     });
-    setCurrentRoute('student-list');
+    if (added) {
+      setCurrentRoute('student-list');
+    }
   };
 
   return (

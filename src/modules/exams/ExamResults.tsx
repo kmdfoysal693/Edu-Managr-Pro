@@ -538,7 +538,7 @@ export const ExamResults: React.FC = () => {
               {/* Primary Search & Filter Bar - Side by Side */}
               <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2.5">
                 {/* 1. Search Bar */}
-                <div className="relative flex-1 min-w-[240px]">
+                <div className="relative flex-1 min-w-0 sm:min-w-[220px]">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
@@ -559,9 +559,9 @@ export const ExamResults: React.FC = () => {
                 </div>
 
                 {/* Filters positioned directly beside the search bar */}
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-center gap-2">
                   {/* 2. Student Name Filter Dropdown */}
-                  <div className="relative min-w-[150px] sm:min-w-[170px]">
+                  <div className="relative w-full sm:w-auto sm:min-w-[160px]">
                     <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                       <User className="w-3.5 h-3.5" />
                     </div>
@@ -585,7 +585,7 @@ export const ExamResults: React.FC = () => {
                   </div>
 
                   {/* 3. Exam Term Filter Dropdown */}
-                  <div className="relative min-w-[150px] sm:min-w-[180px]">
+                  <div className="relative w-full sm:w-auto sm:min-w-[165px]">
                     <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                       <Calendar className="w-3.5 h-3.5" />
                     </div>
@@ -609,7 +609,7 @@ export const ExamResults: React.FC = () => {
                   </div>
 
                   {/* 4. Result Status Filter Dropdown */}
-                  <div className="relative min-w-[130px] sm:min-w-[150px]">
+                  <div className="relative w-full sm:w-auto sm:min-w-[140px]">
                     <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                     </div>
@@ -632,7 +632,7 @@ export const ExamResults: React.FC = () => {
                   </div>
 
                   {/* 5. Class Filter Dropdown */}
-                  <div className="relative min-w-[110px] sm:min-w-[130px]">
+                  <div className="relative w-full sm:w-auto sm:min-w-[125px]">
                     <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                       <GraduationCap className="w-3.5 h-3.5" />
                     </div>
@@ -656,7 +656,7 @@ export const ExamResults: React.FC = () => {
                   </div>
 
                   {/* 6. Grade Filter Dropdown */}
-                  <div className="relative min-w-[100px] sm:min-w-[120px]">
+                  <div className="relative w-full sm:w-auto sm:min-w-[115px]">
                     <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                       <Sparkles className="w-3.5 h-3.5" />
                     </div>

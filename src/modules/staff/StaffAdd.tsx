@@ -97,7 +97,7 @@ export const StaffAdd: React.FC = () => {
       showToast('error', 'Department Required', 'Please create or select a department first.');
       return;
     }
-    addStaff({
+    const added = addStaff({
       fullName: formData.fullName,
       photo: formData.photo || schoolSettings.logo,
       staffId: formData.staffId,
@@ -117,7 +117,9 @@ export const StaffAdd: React.FC = () => {
         phone: formData.emergencyContactPhone,
       },
     });
-    setCurrentRoute('staff-list');
+    if (added) {
+      setCurrentRoute('staff-list');
+    }
   };
 
   return (

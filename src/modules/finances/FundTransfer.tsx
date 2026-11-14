@@ -341,7 +341,7 @@ export const FundTransfer: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white/10 p-3 rounded-xl border border-white/15 text-center min-w-[180px]">
+        <div className="bg-white/10 p-3 rounded-xl border border-white/15 text-center w-full md:w-auto md:min-w-[180px]">
           <span className="text-[11px] font-semibold text-blue-200 block uppercase">
             Available in Main Treasury
           </span>
@@ -969,7 +969,7 @@ export const FundTransfer: React.FC = () => {
               className="bg-white p-6 sm:p-8 rounded-xl border border-slate-300 shadow-xs text-slate-900 font-sans"
             >
               {/* Header */}
-              <div className="border-b-2 border-slate-800 pb-4 mb-4 flex items-center justify-between">
+              <div className="border-b-2 border-slate-800 pb-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <img
                     src={schoolSettings.logo}
@@ -1012,7 +1012,7 @@ export const FundTransfer: React.FC = () => {
 
               {/* Voucher Details Table */}
               <div className="space-y-2 text-xs">
-                <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
                   <div>
                     <span className="text-slate-400 block text-[10px] uppercase font-bold">
                       Source Collection Vault (Source Fund)
@@ -1060,14 +1060,14 @@ export const FundTransfer: React.FC = () => {
               </div>
 
               {/* Signatures */}
-              <div className="grid grid-cols-2 gap-8 mt-12 pt-6 border-t border-slate-200 text-center text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 mt-8 sm:mt-12 pt-6 border-t border-slate-200 text-center text-xs">
                 <div>
-                  <div className="w-40 border-b border-slate-400 mx-auto mb-1.5"></div>
+                  <div className="w-36 sm:w-40 border-b border-slate-400 mx-auto mb-1.5"></div>
                   <p className="font-bold text-slate-800">{selectedVoucher.transferredBy}</p>
                   <p className="text-[10px] text-slate-500">Transferred By / Accounts Officer</p>
                 </div>
                 <div>
-                  <div className="w-40 border-b border-slate-400 mx-auto mb-1.5"></div>
+                  <div className="w-36 sm:w-40 border-b border-slate-400 mx-auto mb-1.5"></div>
                   <p className="font-bold text-slate-800">{selectedVoucher.approvedBy}</p>
                   <p className="text-[10px] text-slate-500">Approved By / Principal & Authority</p>
                 </div>
@@ -1136,7 +1136,7 @@ export const FundTransfer: React.FC = () => {
 
               {/* Transaction Summary Card */}
               <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 text-xs">
-                <div className="grid grid-cols-2 gap-3 pb-3 border-b border-slate-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-3 border-b border-slate-100">
                   <div>
                     <span className="text-slate-400 block text-[11px] font-semibold">Source Vault (Debit):</span>
                     <span className="font-bold text-slate-800 block text-sm">{targetVault?.label || formData.sourceStream}</span>

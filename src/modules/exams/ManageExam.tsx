@@ -38,7 +38,7 @@ export const ManageExam: React.FC = () => {
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addExam({
+    const added = addExam({
       name: formData.name,
       academicYear: formData.academicYear,
       classIds: classes.map((c) => c.id),
@@ -49,6 +49,7 @@ export const ManageExam: React.FC = () => {
       status: formData.status,
       description: formData.description,
     });
+    if (!added) return;
     setIsAddModalOpen(false);
     setFormData({
       name: '',
