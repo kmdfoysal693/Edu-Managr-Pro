@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUpDown, Download } from 'lucide-react';
 import { Button } from './Button';
 
@@ -77,10 +77,18 @@ export function DataTable<T extends { id?: string | number }>({
 
   // Pagination
   const totalPages = Math.ceil(sortedData.length / pageSize) || 1;
+  const safePage = Math.min(currentPage, totalPages);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
+    const start = (safePage - 1) * pageSize;
     return sortedData.slice(start, start + pageSize);
-  }, [sortedData, currentPage, pageSize]);
+  }, [sortedData, safePage, pageSize]);
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -92,7 +100,7 @@ export function DataTable<T extends { id?: string | number }>({
   };
 
   const handleExportCSV = () => {
-    if (!data.length) return;
+    if (!sortedData.length) return;
     const headers = columns.map((col) => `"${col.header.replace(/"/g, '""')}"`).join(',');
     const rows = sortedData.map((row) =>
       columns
@@ -209,15 +217,15 @@ export function DataTable<T extends { id?: string | number }>({
         {/* Pagination Bar */}
         <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            Showing <span className="font-semibold text-slate-700">{filteredData.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}</span> to{' '}
-            <span className="font-semibold text-slate-700">{Math.min(currentPage * pageSize, filteredData.length)}</span> of{' '}
+            Showing <span className="font-semibold text-slate-700">{filteredData.length === 0 ? 0 : (safePage - 1) * pageSize + 1}</span> to{' '}
+            <span className="font-semibold text-slate-700">{Math.min(safePage * pageSize, filteredData.length)}</span> of{' '}
             <span className="font-semibold text-slate-700">{filteredData.length}</span> entries
           </div>
 
           <div className="flex items-center gap-1">
             <button
               onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
+              disabled={safePage === 1}
               className="p-1 rounded-md text-slate-500 hover:bg-slate-200/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
               title="First page"
             >
@@ -225,18 +233,18 @@ export function DataTable<T extends { id?: string | number }>({
             </button>
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
+              disabled={safePage === 1}
               className="p-1 rounded-md text-slate-500 hover:bg-slate-200/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
               title="Previous page"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <span className="px-2 py-0.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded">
-              Page {currentPage} of {totalPages}
+              Page {safePage} of {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
+              disabled={safePage === totalPages}
               className="p-1 rounded-md text-slate-500 hover:bg-slate-200/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
               title="Next page"
             >
@@ -244,7 +252,7 @@ export function DataTable<T extends { id?: string | number }>({
             </button>
             <button
               onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
+              disabled={safePage === totalPages}
               className="p-1 rounded-md text-slate-500 hover:bg-slate-200/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
               title="Last page"
             >

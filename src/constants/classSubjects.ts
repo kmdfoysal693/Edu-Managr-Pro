@@ -2,7 +2,7 @@
  * Standard curriculum subjects mapping per school class
  * Automatically populates subject slots when generating exam routines
  */
-export const DEFAULT_CLASS_SUBJECTS: Record<string, string[]> = {
+const DEFAULT_CLASS_SUBJECTS: Record<string, string[]> = {
   'Playgroup': [
     'Bangla Oral & Rhymes',
     'English Alphabet & Rhymes',
@@ -147,7 +147,7 @@ export const DEFAULT_CLASS_SUBJECTS: Record<string, string[]> = {
 /**
  * Fallback subjects for custom or dynamically created classes
  */
-export const GENERIC_SUBJECT_LIST = [
+const GENERIC_SUBJECT_LIST = [
   'Bangla',
   'English',
   'General Mathematics',

@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { useSchool } from '../../context/SchoolContext';
 import { FinancialTransaction } from '../../types';
-import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Badge, getStatusBadgeVariant } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { DataTable, Column } from '../../components/common/DataTable';
 import { StatCard } from '../../components/common/StatCard';
@@ -15,11 +13,10 @@ import {
   Users,
   Coins,
   Save,
-  CheckCircle2,
 } from 'lucide-react';
 
 export const Donation: React.FC = () => {
-  const { transactions, addTransaction } = useSchool();
+  const { transactions, addTransaction, showToast } = useSchool();
 
   const [selectedReceipt, setSelectedReceipt] = useState<FinancialTransaction | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -27,11 +24,11 @@ export const Donation: React.FC = () => {
   const [formData, setFormData] = useState({
     donorName: '',
     phone: '',
-    amount: 50000,
+    amount: 0,
     date: new Date().toISOString().split('T')[0],
-    purpose: 'Scholarship Fund for Underprivileged Meritorious Students',
+    purpose: '',
     paymentMethod: 'Bank Transfer' as 'Cash' | 'bKash' | 'Nagad' | 'Bank Transfer' | 'Cheque',
-    notes: 'Official donor plaque recognition approved',
+    notes: '',
   });
 
   const donationTx = transactions.filter((t) => t.feeType === 'Donation');
@@ -41,6 +38,11 @@ export const Donation: React.FC = () => {
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const amt = Number(formData.amount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      showToast('error', 'Invalid Amount', 'Please enter a donation amount greater than 0.');
+      return;
+    }
     addTransaction({
       feeType: 'Donation',
       title: formData.purpose,
@@ -56,9 +58,9 @@ export const Donation: React.FC = () => {
     setFormData({
       donorName: '',
       phone: '',
-      amount: 50000,
+      amount: 0,
       date: new Date().toISOString().split('T')[0],
-      purpose: 'STEM Lab & Library Endowment',
+      purpose: '',
       paymentMethod: 'Bank Transfer',
       notes: '',
     });
@@ -201,8 +203,8 @@ export const Donation: React.FC = () => {
               <input
                 type="number"
                 required
-                min="500"
-                value={formData.amount}
+                min="1"
+                value={formData.amount || ''}
                 onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
               />

@@ -8,15 +8,13 @@ import {
   Sparkles,
   ArrowRight,
   GraduationCap,
-  Layers,
   FileText,
   BookmarkCheck,
-  Building2,
   RotateCcw,
 } from 'lucide-react';
 
 export const SubjectAdd: React.FC = () => {
-  const { classes, departments, addSubject, setCurrentRoute } = useSchool();
+  const { classes, departments, addSubject, setCurrentRoute, showToast } = useSchool();
 
   const [name, setName] = useState('');
   const [bengaliName, setBengaliName] = useState('');
@@ -138,15 +136,19 @@ export const SubjectAdd: React.FC = () => {
     e.preventDefault();
 
     if (!name.trim()) {
-      alert('Please enter Subject Name ');
+      showToast('error', 'Missing Subject Name', 'Please enter a subject name.');
       return;
     }
     if (!code.trim()) {
-      alert('Please enter Subject Code ');
+      showToast('error', 'Missing Subject Code', 'Please enter a subject code.');
       return;
     }
     if (selectedClassIds.length === 0) {
-      alert('Please select at least one class for this subject ');
+      showToast('error', 'Class Required', 'Please select at least one class for this subject.');
+      return;
+    }
+    if (Number(totalMarks) <= 0 || Number(passingMarks) < 0 || Number(passingMarks) > Number(totalMarks)) {
+      showToast('error', 'Invalid Marks', 'Passing marks cannot exceed total marks.');
       return;
     }
 

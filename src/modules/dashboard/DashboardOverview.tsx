@@ -20,20 +20,12 @@ import {
   ArrowRight,
   TrendingUp,
   TrendingDown,
-  AlertCircle,
   Calendar,
   CheckCircle2,
-  FileText,
   Banknote,
   Wallet,
   ArrowLeftRight,
-  CalendarClock,
-  CalendarPlus,
-  BookOpen,
-  FileSpreadsheet,
   BellRing,
-  Sparkles,
-  CheckCheck,
   Search,
 } from 'lucide-react';
 
@@ -73,6 +65,8 @@ import {
 
 export const DashboardOverview: React.FC = () => {
   const {
+    userProfile,
+    schoolSettings,
     students,
     staff,
     classes,
@@ -83,16 +77,10 @@ export const DashboardOverview: React.FC = () => {
     teacherSalaries,
     fundTransfers,
     notices,
-    exams,
+    examResults,
     academicEvents,
-    activityLogs,
     setCurrentRoute,
-    subjects,
-    classRoutines,
-    examRoutines,
-    advanceSalaries,
     notifications,
-    unreadNotificationsCount,
   } = useSchool();
 
   // Calculated Stats
@@ -167,24 +155,6 @@ export const DashboardOverview: React.FC = () => {
 
   const totalNoticesCount = notices.length;
 
-  // Newly Added Systems Calculations
-  const totalClassRoutineSlots = classRoutines.length;
-  const uniqueClassesWithRoutine = new Set(classRoutines.map((r) => r.className)).size;
-
-  const totalCurriculumSubjects = subjects.length;
-  const scienceSubjectsCount = subjects.filter((s) => s.group === 'Science').length;
-  const commerceSubjectsCount = subjects.filter((s) => s.group === 'Commerce').length;
-  const humanitiesSubjectsCount = subjects.filter((s) => s.group === 'Humanities').length;
-  const compulsorySubjectsCount = subjects.filter((s) => s.group === 'General' || !s.group).length;
-
-  const totalExamRoutineSlots = examRoutines.length;
-  const uniqueExamClasses = new Set(examRoutines.map((r) => r.className)).size;
-
-  const totalAdvanceDisbursed = advanceSalaries.reduce((sum, a) => sum + a.amount, 0);
-  const totalAdvanceRecovered = advanceSalaries.reduce((sum, a) => sum + a.recoveredAmount, 0);
-  const totalAdvanceRemaining = advanceSalaries.reduce((sum, a) => sum + a.remainingBalance, 0);
-  const activeAdvanceCount = advanceSalaries.filter((a) => a.status === 'Active').length;
-
   // Format BDT
   const fmtBDT = (val: number) => `BDT ${val.toLocaleString('en-BD')}`;
 
@@ -205,11 +175,17 @@ export const DashboardOverview: React.FC = () => {
   const examFeePaidPct = totalStudents > 0 ? Math.round((examPaidStudentsCount / totalStudents) * 100) : 0;
 
   // Monthly Staff Salary Clearance Ratios
-  const currentSalaryMonth = 'November 2026';
+  const currentSalaryMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const currentMonthSalaries = teacherSalaries.filter((s) => s.month === currentSalaryMonth);
   const paidStaffCount = currentMonthSalaries.filter((s) => s.status === 'Completed').length;
   const unpaidStaffCount = Math.max(0, totalStaff - paidStaffCount);
   const staffSalaryPaidPct = totalStaff > 0 ? Math.round((paidStaffCount / totalStaff) * 100) : 0;
+
+  const totalSections = classes.reduce((sum, c) => sum + (c.sections?.length || 0), 0);
+  const totalShareCapital = shareholders.reduce((sum, s) => sum + (s.shareAmount || 0), 0);
+  const highPriorityNoticesCount = notices.filter((n) => n.priority === 'High' || n.priority === 'Urgent').length;
+  const pendingTxCount = transactions.filter((t) => t.status === 'Pending').length;
+  const donationTxCount = transactions.filter((t) => t.feeType === 'Donation' && t.status === 'Paid').length;
 
   // Fund Transfer History Table Filters & Search
   const [transferFilterVault, setTransferFilterVault] = React.useState<string>('All');
@@ -230,52 +206,114 @@ export const DashboardOverview: React.FC = () => {
     return matchesVault && matchesSearch;
   });
 
-  // Chart Data: Student Attendance Overview (Past 6 Days)
-  const attendanceOverviewData = [
-    { day: 'Mon', Present: 24, Absent: 2, Late: 1 },
-    { day: 'Tue', Present: 25, Absent: 1, Late: 1 },
-    { day: 'Wed', Present: 26, Absent: 0, Late: 1 },
-    { day: 'Thu', Present: 23, Absent: 3, Late: 1 },
-    { day: 'Fri', Present: 25, Absent: 1, Late: 1 },
-    { day: 'Sat (Today)', Present: Math.max(studentPresentCount, 7), Absent: 1, Late: 0 },
-  ];
+  // Chart Data: Student Attendance Overview (Computed from real records)
+  const attendanceOverviewData = React.useMemo(() => {
+    if (studentAttendance.length === 0) return [];
+    const byDate = new Map<string, { Present: number; Absent: number; Late: number }>();
+    studentAttendance.forEach((rec) => {
+      const entry = byDate.get(rec.date) || { Present: 0, Absent: 0, Late: 0 };
+      if (rec.status === 'Present') entry.Present += 1;
+      else if (rec.status === 'Absent') entry.Absent += 1;
+      else if (rec.status === 'Late') entry.Late += 1;
+      byDate.set(rec.date, entry);
+    });
+    return Array.from(byDate.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-6)
+      .map(([date, counts]) => ({
+        day: date === todayStr ? 'Today' : date.slice(5),
+        ...counts,
+      }));
+  }, [studentAttendance, todayStr]);
 
-  // Chart Data: Monthly Fee Collection Trend (6 months)
-  const monthlyTrendData = [
-    { month: 'May', Target: 180000, Collected: 175000 },
-    { month: 'Jun', Target: 180000, Collected: 182000 },
-    { month: 'Jul', Target: 185000, Collected: 178000 },
-    { month: 'Aug', Target: 190000, Collected: 195000 },
-    { month: 'Sep', Target: 190000, Collected: 188000 },
-    { month: 'Oct', Target: 200000, Collected: 212000 },
-  ];
+  // Chart Data: Monthly Fee Collection Trend (Computed from real transactions)
+  const monthlyTrendData = React.useMemo(() => {
+    const monthlyTxs = transactions.filter((t) => t.feeType === 'Monthly Fee' && t.status === 'Paid');
+    if (monthlyTxs.length === 0) return [];
+    const byMonth = new Map<string, number>();
+    monthlyTxs.forEach((t) => {
+      const ym = t.date ? t.date.slice(0, 7) : 'Unknown';
+      byMonth.set(ym, (byMonth.get(ym) || 0) + t.amount);
+    });
+    return Array.from(byMonth.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-6)
+      .map(([ym, Collected]) => ({
+        month: ym,
+        Collected,
+      }));
+  }, [transactions]);
 
-  // Chart Data: Student Distribution by Class
-  const classDistData = [
-    { name: 'Class 10 (SSC)', value: 42, color: '#2563EB' },
-    { name: 'Class 9', value: 38, color: '#0EA5E9' },
-    { name: 'Class 8', value: 35, color: '#10B981' },
-    { name: 'Class 5', value: 30, color: '#F59E0B' },
-    { name: 'Primary (1-4)', value: 65, color: '#8B5CF6' },
-    { name: 'Pre-Primary', value: 45, color: '#EC4899' },
-  ];
+  // Chart Data: Student Distribution by Class (Computed from real students)
+  const classDistData = React.useMemo(() => {
+    if (students.length === 0) return [];
+    const palette = ['#2563EB', '#0EA5E9', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6', '#6366F1'];
+    const counts = new Map<string, number>();
+    students.forEach((s) => {
+      const label = s.className || 'Unassigned';
+      counts.set(label, (counts.get(label) || 0) + 1);
+    });
+    return Array.from(counts.entries()).map(([name, value], idx) => ({
+      name,
+      value,
+      color: palette[idx % palette.length],
+    }));
+  }, [students]);
 
-  // Chart Data: Exam Performance Overview
-  const examPerformanceData = [
-    { subject: 'Bangla', GPA5: 85, GPA4: 12, Below: 3 },
-    { subject: 'English', GPA5: 88, GPA4: 9, Below: 3 },
-    { subject: 'Math', GPA5: 92, GPA4: 6, Below: 2 },
-    { subject: 'Science', GPA5: 90, GPA4: 8, Below: 2 },
-    { subject: 'Higher Math', GPA5: 84, GPA4: 13, Below: 3 },
-  ];
+  // Chart Data: Exam Performance Overview (Computed from saved examResults)
+  const examPerformanceData = React.useMemo(() => {
+    if (examResults.length === 0) return [];
+    const subjectStats = new Map<string, { gpa5: number; gpa4: number; below: number; total: number }>();
+    examResults.forEach((res) => {
+      res.subjects.forEach((sub) => {
+        const entry = subjectStats.get(sub.subject) || { gpa5: 0, gpa4: 0, below: 0, total: 0 };
+        entry.total += 1;
+        if (sub.gradePoint >= 5.0) entry.gpa5 += 1;
+        else if (sub.gradePoint >= 4.0) entry.gpa4 += 1;
+        else entry.below += 1;
+        subjectStats.set(sub.subject, entry);
+      });
+    });
+    return Array.from(subjectStats.entries())
+      .slice(0, 8)
+      .map(([subject, st]) => ({
+        subject,
+        GPA5: Math.round((st.gpa5 / st.total) * 100),
+        GPA4: Math.round((st.gpa4 / st.total) * 100),
+        Below: Math.round((st.below / st.total) * 100),
+      }));
+  }, [examResults]);
 
-  // Chart Data: Income Overview (Tuition, Exam, Donations, Daycare)
-  const incomeOverviewData = [
-    { week: 'Week 1', Tuition: 45000, ExamFees: 12000, Donations: 20000, Daycare: 8000 },
-    { week: 'Week 2', Tuition: 62000, ExamFees: 18000, Donations: 50000, Daycare: 12000 },
-    { week: 'Week 3', Tuition: 58000, ExamFees: 25000, Donations: 80000, Daycare: 10000 },
-    { week: 'Week 4', Tuition: 47000, ExamFees: 30000, Donations: 75000, Daycare: 9000 },
-  ];
+  // Chart Data: Income Overview (Computed from real transactions)
+  const incomeOverviewData = React.useMemo(() => {
+    const incomeTxs = transactions.filter(
+      (t) =>
+        t.status === 'Paid' &&
+        (t.feeType === 'Monthly Fee' ||
+          t.feeType === 'Exam Fee' ||
+          t.feeType === 'Donation' ||
+          t.feeType === 'Day Care Fee' ||
+          t.feeType === 'Other Income')
+    );
+    if (incomeTxs.length === 0) return [];
+    const byDate = new Map<string, { Tuition: number; ExamFees: number; Donations: number; Daycare: number }>();
+    incomeTxs.forEach((t) => {
+      const key = t.date || 'Undated';
+      const entry = byDate.get(key) || { Tuition: 0, ExamFees: 0, Donations: 0, Daycare: 0 };
+      if (t.feeType === 'Monthly Fee') entry.Tuition += t.amount;
+      else if (t.feeType === 'Exam Fee') entry.ExamFees += t.amount;
+      else if (t.feeType === 'Donation') entry.Donations += t.amount;
+      else if (t.feeType === 'Day Care Fee') entry.Daycare += t.amount;
+      byDate.set(key, entry);
+    });
+    return Array.from(byDate.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-8)
+      .map(([date, vals]) => ({
+        week: date.slice(5) || date,
+        ...vals,
+      }));
+  }, [transactions]);
 
   return (
     <div className="space-y-6">
@@ -283,14 +321,20 @@ export const DashboardOverview: React.FC = () => {
       <div className="bg-gradient-to-r from-[#172554] via-[#1E3A8A] to-[#2563EB] rounded-2xl p-6 sm:p-7 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/15 text-blue-100 backdrop-blur-xs">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Academic Session 2026-2027 Active
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Academic Session {schoolSettings.academicSession || '2026-2027'} Active
           </span>
           <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight mt-2.5">
-            Welcome back, Md. Foysal Khan
+            Welcome back, {userProfile.name || 'Administrator'}
           </h2>
           <p className="text-sm text-blue-100/90 mt-1 max-w-xl">
-            Everything is running smoothly. Today student presence is at{' '}
-            <span className="font-bold text-white underline decoration-emerald-400 decoration-2">{studentAttPct}%</span> across all classes.
+            {totalStudents > 0 ? (
+              <>
+                Everything is running smoothly. Today student presence is at{' '}
+                <span className="font-bold text-white underline decoration-emerald-400 decoration-2">{studentAttPct}%</span> across all classes.
+              </>
+            ) : (
+              <>Your workspace is clean and ready. Start by creating classes, adding staff, or admitting students.</>
+            )}
           </p>
         </div>
 
@@ -447,13 +491,17 @@ export const DashboardOverview: React.FC = () => {
       </div>
 
 
-      {/* 12 Stat Cards Grid */}
+      {/* Stat Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         <StatCard
           title="Total Students"
           value={totalStudents}
           icon={GraduationCap}
-          trend={{ value: '+8.4%', isPositive: true, label: 'vs last semester' }}
+          trend={
+            totalStudents > 0
+              ? { value: `${totalClasses} classes`, isPositive: true, label: 'enrolled' }
+              : { value: 'No students yet', isNeutral: true }
+          }
           colorTheme="blue"
           onClick={() => setCurrentRoute('student-list')}
         />
@@ -461,7 +509,11 @@ export const DashboardOverview: React.FC = () => {
           title="Total Staff"
           value={totalStaff}
           icon={Briefcase}
-          trend={{ value: 'Full capacity', isNeutral: true }}
+          trend={
+            totalStaff > 0
+              ? { value: `${staff.filter((s) => s.employmentStatus === 'Permanent').length} permanent`, isNeutral: true }
+              : { value: 'No staff yet', isNeutral: true }
+          }
           colorTheme="sky"
           onClick={() => setCurrentRoute('staff-list')}
         />
@@ -469,7 +521,11 @@ export const DashboardOverview: React.FC = () => {
           title="Total Teachers"
           value={totalTeachers}
           icon={Users}
-          trend={{ value: '1:14 ratio', isPositive: true, label: 'student/teacher' }}
+          trend={
+            totalTeachers > 0 && totalStudents > 0
+              ? { value: `1:${Math.max(1, Math.round(totalStudents / totalTeachers))} ratio`, isPositive: true, label: 'student/teacher' }
+              : { value: `${totalTeachers} faculty`, isNeutral: true }
+          }
           colorTheme="indigo"
           onClick={() => setCurrentRoute('staff-list')}
         />
@@ -477,7 +533,7 @@ export const DashboardOverview: React.FC = () => {
           title="Total Classes"
           value={totalClasses}
           icon={Layers}
-          trend={{ value: '26 sections', isNeutral: true }}
+          trend={{ value: `${totalSections} sections`, isNeutral: true }}
           colorTheme="violet"
           onClick={() => setCurrentRoute('class-list')}
         />
@@ -486,7 +542,11 @@ export const DashboardOverview: React.FC = () => {
           value={`${studentAttPct}%`}
           subtitle={`${studentPresentCount} of ${totalStudents} present`}
           icon={CalendarCheck}
-          trend={{ value: '+2.1%', isPositive: true, label: 'from yesterday' }}
+          trend={
+            todayStudentAtt.length > 0
+              ? { value: `${todayStudentAtt.length} marked today`, isPositive: studentAttPct >= 75 }
+              : { value: 'Not marked today', isNeutral: true }
+          }
           colorTheme="emerald"
           onClick={() => setCurrentRoute('attendance-student')}
         />
@@ -495,7 +555,11 @@ export const DashboardOverview: React.FC = () => {
           value={`${staffAttPct}%`}
           subtitle={`${staffPresentCount} of ${totalStaff} present`}
           icon={UserCheck}
-          trend={{ value: '98% avg', isPositive: true }}
+          trend={
+            todayStaffAtt.length > 0
+              ? { value: `${todayStaffAtt.length} marked today`, isPositive: staffAttPct >= 75 }
+              : { value: 'Not marked today', isNeutral: true }
+          }
           colorTheme="teal"
           onClick={() => setCurrentRoute('attendance-staff')}
         />
@@ -503,7 +567,7 @@ export const DashboardOverview: React.FC = () => {
           title="Total Shareholders"
           value={totalShareholdersCount}
           icon={UsersRound}
-          trend={{ value: 'BDT 9,000,000', isPositive: true, label: 'equity capital' }}
+          trend={{ value: fmtBDT(totalShareCapital), isPositive: totalShareCapital > 0, isNeutral: totalShareCapital === 0, label: 'equity capital' }}
           colorTheme="indigo"
           onClick={() => setCurrentRoute('shareholder-list')}
         />
@@ -511,7 +575,7 @@ export const DashboardOverview: React.FC = () => {
           title="Monthly Fee Collection"
           value={fmtBDT(monthlyFeeCollection)}
           icon={Receipt}
-          trend={{ value: '+12.5%', isPositive: true, label: 'October run rate' }}
+          trend={{ value: `${monthlyPaidStudentsCount} paid`, isPositive: monthlyFeeCollection > 0, isNeutral: monthlyFeeCollection === 0 }}
           colorTheme="emerald"
           onClick={() => setCurrentRoute('finance-monthly-fee')}
         />
@@ -528,7 +592,7 @@ export const DashboardOverview: React.FC = () => {
           title="Exam Fee Collection"
           value={fmtBDT(examFeeCollection)}
           icon={Coins}
-          trend={{ value: '88% cleared', isPositive: true }}
+          trend={{ value: `${examFeePaidPct}% cleared`, isPositive: examFeeCollection > 0, isNeutral: examFeeCollection === 0 }}
           colorTheme="sky"
           onClick={() => setCurrentRoute('finance-exam-fee')}
         />
@@ -545,7 +609,7 @@ export const DashboardOverview: React.FC = () => {
           title="Total Donations"
           value={fmtBDT(totalDonations)}
           icon={HeartHandshake}
-          trend={{ value: '+BDT 225,000', isPositive: true, label: 'this month' }}
+          trend={{ value: `${donationTxCount} contributions`, isPositive: donationTxCount > 0, isNeutral: donationTxCount === 0 }}
           colorTheme="violet"
           onClick={() => setCurrentRoute('finance-donation')}
         />
@@ -554,7 +618,7 @@ export const DashboardOverview: React.FC = () => {
           value={fmtBDT(totalTeacherSalariesPaid)}
           subtitle={`${paidStaffCount} of ${totalStaff} staff paid`}
           icon={Banknote}
-          trend={{ value: `${paidStaffCount} paid / ${unpaidStaffCount} pending`, isPositive: true }}
+          trend={{ value: `${paidStaffCount} paid / ${unpaidStaffCount} pending`, isPositive: unpaidStaffCount === 0, isNeutral: totalStaff === 0 }}
           colorTheme="rose"
           onClick={() => setCurrentRoute('finance-salary')}
         />
@@ -571,7 +635,7 @@ export const DashboardOverview: React.FC = () => {
           title="Pending Student Fees"
           value={fmtBDT(pendingFeesTotal)}
           icon={Clock}
-          trend={{ value: '4 reminders sent', isPositive: false }}
+          trend={{ value: `${pendingTxCount} pending entries`, isPositive: pendingTxCount === 0, isNeutral: pendingTxCount === 0 }}
           colorTheme="rose"
           onClick={() => setCurrentRoute('finance-monthly-fee')}
         />
@@ -579,7 +643,7 @@ export const DashboardOverview: React.FC = () => {
           title="Total Notices"
           value={totalNoticesCount}
           icon={Bell}
-          trend={{ value: '2 high priority', isNeutral: true }}
+          trend={{ value: `${highPriorityNoticesCount} high priority`, isNeutral: true }}
           colorTheme="amber"
           onClick={() => setCurrentRoute('notice-board')}
         />
@@ -604,7 +668,7 @@ export const DashboardOverview: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
-              Session 2026-2027
+              Session {schoolSettings.academicSession || '2026-2027'}
             </span>
           </div>
         </div>
@@ -770,27 +834,35 @@ export const DashboardOverview: React.FC = () => {
           }
         >
           <div className="h-72 w-full pt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={attendanceOverviewData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="day" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
-                />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                <Bar dataKey="Present" fill="#2563EB" radius={[4, 4, 0, 0]} barSize={20} />
-                <Bar dataKey="Absent" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={20} />
-                <Bar dataKey="Late" fill="#F59E0B" radius={[4, 4, 0, 0]} barSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
+            {attendanceOverviewData.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center text-slate-400">
+                <CalendarCheck className="w-10 h-10 text-slate-300 mb-2" />
+                <p className="text-sm font-semibold text-slate-600">No attendance data yet</p>
+                <p className="text-xs text-slate-400 mt-0.5">Record student attendance to view daily trends.</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={attendanceOverviewData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="day" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                  <Bar dataKey="Present" fill="#2563EB" radius={[4, 4, 0, 0]} barSize={20} />
+                  <Bar dataKey="Absent" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={20} />
+                  <Bar dataKey="Late" fill="#F59E0B" radius={[4, 4, 0, 0]} barSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </Card>
 
         {/* Chart 2: Monthly Fee Collection (Line Chart) */}
         <Card
           title="Monthly Fee Collection Trend"
-          subtitle="Collected amounts vs projected school target (BDT)"
+          subtitle="Collected tuition amounts by month (BDT)"
           icon={Receipt}
           action={
             <Button variant="ghost" size="sm" onClick={() => setCurrentRoute('finance-monthly-fee')}>
@@ -799,20 +871,27 @@ export const DashboardOverview: React.FC = () => {
           }
         >
           <div className="h-72 w-full pt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(val) => `BDT ${val / 1000}k`} />
-                <Tooltip
-                  formatter={(val: any) => [fmtBDT(Number(val) || 0), 'Amount']}
-                  contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
-                />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                <Line type="monotone" dataKey="Collected" stroke="#16A34A" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="Target" stroke="#94A3B8" strokeDasharray="4 4" strokeWidth={1.5} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
+            {monthlyTrendData.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center text-slate-400">
+                <Receipt className="w-10 h-10 text-slate-300 mb-2" />
+                <p className="text-sm font-semibold text-slate-600">No monthly fee collections yet</p>
+                <p className="text-xs text-slate-400 mt-0.5">Collect monthly tuition fees to populate this chart.</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(val) => `BDT ${val / 1000}k`} />
+                  <Tooltip
+                    formatter={(val: any) => [fmtBDT(Number(val) || 0), 'Collected']}
+                    contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                  <Line type="monotone" dataKey="Collected" stroke="#16A34A" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </Card>
 
@@ -823,47 +902,57 @@ export const DashboardOverview: React.FC = () => {
           icon={Layers}
         >
           <div className="h-72 w-full flex flex-col sm:flex-row items-center justify-center gap-4">
-            <div className="w-full sm:w-1/2 h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={classDistData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {classDistData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(val: any) => [`${val || 0} Students`, 'Total']}
-                    contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="w-full sm:w-1/2 grid grid-cols-2 gap-2 text-xs">
-              {classDistData.map((c) => (
-                <div key={c.name} className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-100">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-700 truncate">{c.name}</p>
-                    <p className="text-[11px] text-slate-400">{c.value} students</p>
-                  </div>
+            {classDistData.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center text-slate-400">
+                <Layers className="w-10 h-10 text-slate-300 mb-2" />
+                <p className="text-sm font-semibold text-slate-600">No enrolled students yet</p>
+                <p className="text-xs text-slate-400 mt-0.5">Admit students to view class-wise distribution.</p>
+              </div>
+            ) : (
+              <>
+                <div className="w-full sm:w-1/2 h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={classDistData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={80}
+                        paddingAngle={3}
+                        dataKey="value"
+                      >
+                        {classDistData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(val: any) => [`${val || 0} Students`, 'Total']}
+                        contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-              ))}
-            </div>
+                <div className="w-full sm:w-1/2 grid grid-cols-2 gap-2 text-xs max-h-60 overflow-y-auto">
+                  {classDistData.map((c) => (
+                    <div key={c.name} className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-100">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-700 truncate">{c.name}</p>
+                        <p className="text-[11px] text-slate-400">{c.value} students</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </Card>
 
         {/* Chart 4: Exam Performance Overview (Bar Chart) */}
         <Card
           title="Exam Performance Overview"
-          subtitle="SSC Pre-Test & Mid-Term grade distribution (%)"
+          subtitle="Published exam grade distribution (%)"
           icon={TrendingUp}
           action={
             <Button variant="ghost" size="sm" onClick={() => setCurrentRoute('exam-results')}>
@@ -872,20 +961,28 @@ export const DashboardOverview: React.FC = () => {
           }
         >
           <div className="h-72 w-full pt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={examPerformanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="subject" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} unit="%" />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
-                />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                <Bar dataKey="GPA5" name="GPA 5.0 (A+)" fill="#2563EB" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="GPA4" name="GPA 4.0-4.9 (A)" fill="#0EA5E9" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Below" name="Below 4.0" fill="#E2E8F0" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {examPerformanceData.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center text-slate-400">
+                <TrendingUp className="w-10 h-10 text-slate-300 mb-2" />
+                <p className="text-sm font-semibold text-slate-600">No exam results recorded yet</p>
+                <p className="text-xs text-slate-400 mt-0.5">Publish student marksheets to view grade breakdown.</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={examPerformanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="subject" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} unit="%" />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                  <Bar dataKey="GPA5" name="GPA 5.0 (A+)" fill="#2563EB" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="GPA4" name="GPA 4.0-4.9 (A)" fill="#0EA5E9" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Below" name="Below 4.0" fill="#E2E8F0" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </Card>
       </div>
@@ -1050,7 +1147,7 @@ export const DashboardOverview: React.FC = () => {
       {/* Chart 5: Comprehensive Income Overview (Area Chart) */}
       <Card
         title="Income Streams Overview"
-        subtitle="Weekly revenue breakdown across Tuition, Exam Fees, Donations & Daycare (BDT)"
+        subtitle="Revenue breakdown across Tuition, Exam Fees, Donations & Daycare (BDT)"
         icon={Receipt}
         action={
           <Button variant="ghost" size="sm" onClick={() => setCurrentRoute('finance-others')}>
@@ -1059,35 +1156,43 @@ export const DashboardOverview: React.FC = () => {
         }
       >
         <div className="h-72 w-full pt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={incomeOverviewData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorTuition" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2563EB" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorDonations" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorExam" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="week" stroke="#94a3b8" fontSize={11} tickLine={false} />
-              <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(val) => `BDT ${val / 1000}k`} />
-              <Tooltip
-                formatter={(val: any) => [fmtBDT(Number(val) || 0), 'Amount']}
-                contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
-              />
-              <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-              <Area type="monotone" dataKey="Tuition" stroke="#2563EB" fillOpacity={1} fill="url(#colorTuition)" />
-              <Area type="monotone" dataKey="Donations" stroke="#10B981" fillOpacity={1} fill="url(#colorDonations)" />
-              <Area type="monotone" dataKey="ExamFees" stroke="#F59E0B" fillOpacity={1} fill="url(#colorExam)" />
-            </AreaChart>
-          </ResponsiveContainer>
+          {incomeOverviewData.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center text-slate-400">
+              <Coins className="w-10 h-10 text-slate-300 mb-2" />
+              <p className="text-sm font-semibold text-slate-600">No income transactions recorded yet</p>
+              <p className="text-xs text-slate-400 mt-0.5">Fee collections and donations will appear here automatically.</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={incomeOverviewData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorTuition" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2563EB" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorDonations" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorExam" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="week" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(val) => `BDT ${val / 1000}k`} />
+                <Tooltip
+                  formatter={(val: any) => [fmtBDT(Number(val) || 0), 'Amount']}
+                  contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
+                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                <Area type="monotone" dataKey="Tuition" stroke="#2563EB" fillOpacity={1} fill="url(#colorTuition)" />
+                <Area type="monotone" dataKey="Donations" stroke="#10B981" fillOpacity={1} fill="url(#colorDonations)" />
+                <Area type="monotone" dataKey="ExamFees" stroke="#F59E0B" fillOpacity={1} fill="url(#colorExam)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </Card>
 
@@ -1105,30 +1210,37 @@ export const DashboardOverview: React.FC = () => {
           }
         >
           <div className="space-y-3">
-            {students.slice(0, 4).map((student) => (
-              <div
-                key={student.id}
-                onClick={() => setCurrentRoute('student-list')}
-                className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer border border-transparent hover:border-slate-100"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <img
-                    src={student.photo}
-                    alt={student.fullName}
-                    className="w-9 h-9 rounded-full object-cover ring-1 ring-slate-200"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-[#172554] truncate">{student.fullName}</p>
-                    <p className="text-[11px] text-slate-400 truncate">
-                      {student.className} • Roll: {student.rollNumber}
-                    </p>
-                  </div>
-                </div>
-                <Badge variant={getStatusBadgeVariant(student.status)} size="sm">
-                  {student.status}
-                </Badge>
+            {students.length === 0 ? (
+              <div className="py-8 text-center text-slate-400">
+                <GraduationCap className="w-8 h-8 mx-auto text-slate-300 mb-1.5" />
+                <p className="text-xs font-medium text-slate-500">No students enrolled yet</p>
               </div>
-            ))}
+            ) : (
+              students.slice(0, 4).map((student) => (
+                <div
+                  key={student.id}
+                  onClick={() => setCurrentRoute('student-list')}
+                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer border border-transparent hover:border-slate-100"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img
+                      src={student.photo}
+                      alt={student.fullName}
+                      className="w-9 h-9 rounded-full object-cover ring-1 ring-slate-200"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-[#172554] truncate">{student.fullName}</p>
+                      <p className="text-[11px] text-slate-400 truncate">
+                        {student.className} • Roll: {student.rollNumber}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant={getStatusBadgeVariant(student.status)} size="sm">
+                    {student.status}
+                  </Badge>
+                </div>
+              ))
+            )}
           </div>
         </Card>
 
@@ -1144,33 +1256,40 @@ export const DashboardOverview: React.FC = () => {
           }
         >
           <div className="space-y-3">
-            {transactions.slice(0, 4).map((tx) => (
-              <div
-                key={tx.id}
-                className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-[#172554] truncate">{tx.partyName}</span>
-                    <span className="text-[10px] font-mono text-slate-400">({tx.paymentMethod})</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 truncate">{tx.title}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p
-                    className={`text-xs font-bold ${
-                      tx.feeType === 'School Expense' ? 'text-rose-600' : 'text-emerald-700'
-                    }`}
-                  >
-                    {tx.feeType === 'School Expense' ? '-' : '+'}
-                    {fmtBDT(tx.amount)}
-                  </p>
-                  <Badge variant={getStatusBadgeVariant(tx.status)} size="sm" className="mt-0.5">
-                    {tx.status}
-                  </Badge>
-                </div>
+            {transactions.length === 0 ? (
+              <div className="py-8 text-center text-slate-400">
+                <Receipt className="w-8 h-8 mx-auto text-slate-300 mb-1.5" />
+                <p className="text-xs font-medium text-slate-500">No transactions recorded yet</p>
               </div>
-            ))}
+            ) : (
+              transactions.slice(0, 4).map((tx) => (
+                <div
+                  key={tx.id}
+                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-[#172554] truncate">{tx.partyName}</span>
+                      <span className="text-[10px] font-mono text-slate-400">({tx.paymentMethod})</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 truncate">{tx.title}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p
+                      className={`text-xs font-bold ${
+                        tx.feeType === 'School Expense' ? 'text-rose-600' : 'text-emerald-700'
+                      }`}
+                    >
+                      {tx.feeType === 'School Expense' ? '-' : '+'}
+                      {fmtBDT(tx.amount)}
+                    </p>
+                    <Badge variant={getStatusBadgeVariant(tx.status)} size="sm" className="mt-0.5">
+                      {tx.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </Card>
 
@@ -1186,22 +1305,29 @@ export const DashboardOverview: React.FC = () => {
           }
         >
           <div className="space-y-3">
-            {academicEvents.slice(0, 4).map((evt) => (
-              <div
-                key={evt.id}
-                onClick={() => setCurrentRoute('academic-calendar')}
-                className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-[#2563EB]">
-                    {evt.category}
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-medium">{evt.startDate}</span>
-                </div>
-                <h5 className="text-xs font-bold text-[#172554] mt-1.5 truncate">{evt.title}</h5>
-                {evt.time && <p className="text-[11px] text-slate-500 mt-0.5">{evt.time}</p>}
+            {academicEvents.length === 0 ? (
+              <div className="py-8 text-center text-slate-400">
+                <Calendar className="w-8 h-8 mx-auto text-slate-300 mb-1.5" />
+                <p className="text-xs font-medium text-slate-500">No upcoming events scheduled</p>
               </div>
-            ))}
+            ) : (
+              academicEvents.slice(0, 4).map((evt) => (
+                <div
+                  key={evt.id}
+                  onClick={() => setCurrentRoute('academic-calendar')}
+                  className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-[#2563EB]">
+                      {evt.category}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">{evt.startDate}</span>
+                  </div>
+                  <h5 className="text-xs font-bold text-[#172554] mt-1.5 truncate">{evt.title}</h5>
+                  {evt.time && <p className="text-[11px] text-slate-500 mt-0.5">{evt.time}</p>}
+                </div>
+              ))
+            )}
           </div>
         </Card>
       </div>
@@ -1220,56 +1346,63 @@ export const DashboardOverview: React.FC = () => {
           }
         >
           <div className="space-y-3">
-            {notices.slice(0, 3).map((notice, index) => {
-              const isColored = index % 2 === 1;
+            {notices.length === 0 ? (
+              <div className="py-8 text-center text-slate-400">
+                <Bell className="w-8 h-8 mx-auto text-slate-300 mb-1.5" />
+                <p className="text-xs font-medium text-slate-500">No notices published yet</p>
+              </div>
+            ) : (
+              notices.slice(0, 3).map((notice, index) => {
+                const isColored = index % 2 === 1;
 
-              return (
-                <div
-                  key={notice.id}
-                  onClick={() => setCurrentRoute('notice-board')}
-                  style={isColored ? { backgroundColor: '#99A1AF' } : { backgroundColor: '#FFFFFF' }}
-                  className={`p-3.5 rounded-xl border transition-all cursor-pointer shadow-xs ${
-                    isColored
-                      ? 'border-[#7E8795] text-slate-950 hover:shadow-md'
-                      : 'border-slate-200/80 hover:border-blue-300 hover:bg-blue-50/20 text-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      {notice.isPinned && (
-                        <span
-                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                            isColored ? 'bg-amber-300 text-amber-950 font-black' : 'bg-amber-100 text-amber-700'
-                          }`}
-                        >
-                          PINNED
-                        </span>
-                      )}
-                      <Badge variant={getStatusBadgeVariant(notice.priority)} size="sm">
-                        {notice.priority}
-                      </Badge>
+                return (
+                  <div
+                    key={notice.id}
+                    onClick={() => setCurrentRoute('notice-board')}
+                    style={isColored ? { backgroundColor: '#99A1AF' } : { backgroundColor: '#FFFFFF' }}
+                    className={`p-3.5 rounded-xl border transition-all cursor-pointer shadow-xs ${
+                      isColored
+                        ? 'border-[#7E8795] text-slate-950 hover:shadow-md'
+                        : 'border-slate-200/80 hover:border-blue-300 hover:bg-blue-50/20 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        {notice.isPinned && (
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                              isColored ? 'bg-amber-300 text-amber-950 font-black' : 'bg-amber-100 text-amber-700'
+                            }`}
+                          >
+                            PINNED
+                          </span>
+                        )}
+                        <Badge variant={getStatusBadgeVariant(notice.priority)} size="sm">
+                          {notice.priority}
+                        </Badge>
+                      </div>
+                      <span className={`text-[11px] font-mono ${isColored ? 'text-slate-950 font-bold' : 'text-slate-400'}`}>
+                        {notice.publishDate}
+                      </span>
                     </div>
-                    <span className={`text-[11px] font-mono ${isColored ? 'text-slate-950 font-bold' : 'text-slate-400'}`}>
-                      {notice.publishDate}
-                    </span>
+                    <h4
+                      className={`text-xs sm:text-sm font-bold mt-2 line-clamp-1 ${
+                        isColored ? 'text-slate-950' : 'text-[#172554]'
+                      }`}
+                    >
+                      {notice.title}
+                    </h4>
+                    <p
+                      className={`text-xs mt-1 line-clamp-2 leading-relaxed ${
+                        isColored ? 'text-slate-900 font-medium' : 'text-slate-500'
+                      }`}
+                    >
+                      {notice.description}
+                    </p>
                   </div>
-                  <h4
-                    className={`text-xs sm:text-sm font-bold mt-2 line-clamp-1 ${
-                      isColored ? 'text-slate-950' : 'text-[#172554]'
-                    }`}
-                  >
-                    {notice.title}
-                  </h4>
-                  <p
-                    className={`text-xs mt-1 line-clamp-2 leading-relaxed ${
-                      isColored ? 'text-slate-900 font-medium' : 'text-slate-500'
-                    }`}
-                  >
-                    {notice.description}
-                  </p>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </Card>
 
@@ -1285,48 +1418,55 @@ export const DashboardOverview: React.FC = () => {
           }
         >
           <div className="space-y-2.5">
-            {notifications.slice(0, 5).map((notif) => (
-              <div
-                key={notif.id}
-                onClick={() => {
-                  if (notif.actionRoute) setCurrentRoute(notif.actionRoute);
-                }}
-                className={`flex items-start gap-3 p-2.5 rounded-xl transition-colors cursor-pointer border ${
-                  !notif.read ? 'bg-blue-50/50 border-blue-200/60 hover:bg-blue-50' : 'hover:bg-slate-50 border-slate-100'
-                }`}
-              >
-                <div className="shrink-0 mt-1">
-                  {notif.type === 'alert' ? (
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 block" />
-                  ) : notif.type === 'warning' ? (
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 block" />
-                  ) : notif.type === 'success' ? (
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 block" />
-                  ) : (
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 block" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-bold text-[#172554] truncate">{notif.title}</p>
-                    <span className="text-[10px] font-semibold text-slate-400 shrink-0">
-                      {formatRelativeTime(notif.timestamp)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 mt-0.5 leading-snug line-clamp-1">{notif.message}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
-                      {notif.module}
-                    </span>
-                    {notif.actionRoute && (
-                      <span className="text-[10px] font-bold text-[#2563EB] hover:underline">
-                        Open &rarr;
-                      </span>
+            {notifications.length === 0 ? (
+              <div className="py-8 text-center text-slate-400">
+                <BellRing className="w-8 h-8 mx-auto text-slate-300 mb-1.5" />
+                <p className="text-xs font-medium text-slate-500">No system activity logged yet</p>
+              </div>
+            ) : (
+              notifications.slice(0, 5).map((notif) => (
+                <div
+                  key={notif.id}
+                  onClick={() => {
+                    if (notif.actionRoute) setCurrentRoute(notif.actionRoute);
+                  }}
+                  className={`flex items-start gap-3 p-2.5 rounded-xl transition-colors cursor-pointer border ${
+                    !notif.read ? 'bg-blue-50/50 border-blue-200/60 hover:bg-blue-50' : 'hover:bg-slate-50 border-slate-100'
+                  }`}
+                >
+                  <div className="shrink-0 mt-1">
+                    {notif.type === 'alert' ? (
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 block" />
+                    ) : notif.type === 'warning' ? (
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 block" />
+                    ) : notif.type === 'success' ? (
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 block" />
+                    ) : (
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500 block" />
                     )}
                   </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-bold text-[#172554] truncate">{notif.title}</p>
+                      <span className="text-[10px] font-semibold text-slate-400 shrink-0">
+                        {formatRelativeTime(notif.timestamp)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-0.5 leading-snug line-clamp-1">{notif.message}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
+                        {notif.module}
+                      </span>
+                      {notif.actionRoute && (
+                        <span className="text-[10px] font-bold text-[#2563EB] hover:underline">
+                          Open &rarr;
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </Card>
       </div>

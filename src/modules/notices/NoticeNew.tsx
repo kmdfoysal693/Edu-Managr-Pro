@@ -69,7 +69,7 @@ export const NoticeNew: React.FC = () => {
             <input
               type="text"
               required
-              placeholder="e.g. Mandatory Clearance of Dues & Issuance of Admit Cards for Final Exam 2026"
+              placeholder="e.g. Official Academic Notice & Examination Guidelines"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"

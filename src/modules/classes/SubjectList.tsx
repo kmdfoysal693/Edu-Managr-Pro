@@ -6,14 +6,9 @@ import {
   BookPlus,
   Search,
   Filter,
-  GraduationCap,
-  Sparkles,
   Edit2,
   Trash2,
-  Layers,
-  CheckCircle2,
   X,
-  FileText,
   BookmarkCheck,
   Check,
   BookOpen,
@@ -25,7 +20,6 @@ export const SubjectList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState<string>('All');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>('All');
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('All');
 
   // Edit Modal State
   const [editingSubject, setEditingSubject] = useState<SubjectItem | null>(null);
@@ -78,9 +72,6 @@ export const SubjectList: React.FC = () => {
       // Group filter
       if (selectedGroup !== 'All' && s.group !== selectedGroup) return false;
 
-      // Type filter
-      if (selectedTypeFilter !== 'All' && s.type !== selectedTypeFilter) return false;
-
       // Class filter
       if (selectedClassFilter !== 'All') {
         const matchesClass =
@@ -91,7 +82,7 @@ export const SubjectList: React.FC = () => {
 
       return true;
     });
-  }, [subjects, searchQuery, selectedGroup, selectedTypeFilter, selectedClassFilter]);
+  }, [subjects, searchQuery, selectedGroup, selectedClassFilter]);
 
   // Statistics
   const stats = useMemo(() => {

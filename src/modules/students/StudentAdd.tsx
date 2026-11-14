@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSchool } from '../../context/SchoolContext';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
@@ -9,25 +9,30 @@ import {
   ArrowLeft,
   BookOpen,
   CheckCircle2,
-  BookmarkCheck,
   Sparkles,
+  Camera,
+  Upload,
+  Trash2,
 } from 'lucide-react';
 
 export const StudentAdd: React.FC = () => {
-  const { classes, subjects, getSubjectsForClassAndGroup, addStudent, setCurrentRoute } = useSchool();
+  const { classes, subjects, getSubjectsForClassAndGroup, addStudent, setCurrentRoute, schoolSettings, showToast } = useSchool();
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string>('');
 
+  const currentYear = String(new Date().getFullYear());
   const [formData, setFormData] = useState({
     fullName: '',
-    photo: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80',
-    studentId: `STD-2026-${String(Math.floor(10 + Math.random() * 900)).padStart(3, '0')}`,
-    admissionNumber: `ADM-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-    dateOfBirth: '2012-05-10',
+    photo: '',
+    studentId: `STD-${currentYear}-${String(Math.floor(100 + Math.random() * 900))}`,
+    admissionNumber: `ADM-${currentYear}-${Math.floor(1000 + Math.random() * 9000)}`,
+    dateOfBirth: '',
     gender: 'Male' as 'Male' | 'Female' | 'Other',
-    bloodGroup: 'B+' as 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-',
-    classId: classes[7]?.id || classes[0]?.id || 'cls-8',
-    section: 'A',
-    rollNumber: '05',
-    academicYear: '2026',
+    bloodGroup: 'A+' as 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-',
+    classId: classes[0]?.id || '',
+    section: classes[0]?.sections?.[0] || 'A',
+    rollNumber: '',
+    academicYear: currentYear,
     admissionDate: new Date().toISOString().split('T')[0],
     fatherName: '',
     fatherPhone: '',
@@ -40,6 +45,16 @@ export const StudentAdd: React.FC = () => {
     previousSchool: '',
     status: 'Active' as 'Active' | 'Suspended' | 'Alumni' | 'Transferred',
   });
+
+  useEffect(() => {
+    if ((!formData.classId || !classes.some((c) => c.id === formData.classId)) && classes[0]) {
+      setFormData((prev) => ({
+        ...prev,
+        classId: classes[0].id,
+        section: classes[0].sections?.[0] || 'A',
+      }));
+    }
+  }, [classes, formData.classId]);
 
   const selectedClass = classes.find((c) => c.id === formData.classId);
 
@@ -91,8 +106,57 @@ export const StudentAdd: React.FC = () => {
     );
   };
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('error', 'Invalid Image File', 'Please select a valid image file (JPG, PNG, WebP).');
+      return;
+    }
+    setSelectedFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (!dataUrl) return;
+      if (file.size > 350 * 1024 && file.type !== 'image/svg+xml') {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 600;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            setFormData((prev) => ({ ...prev, photo: canvas.toDataURL('image/jpeg', 0.85) }));
+          } else {
+            setFormData((prev) => ({ ...prev, photo: dataUrl }));
+          }
+        };
+        img.src = dataUrl;
+      } else {
+        setFormData((prev) => ({ ...prev, photo: dataUrl }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.classId || !selectedClass) {
+      showToast('error', 'Class Required', 'Please create and select an academic class before admitting a student.');
+      return;
+    }
 
     const assignedNames = subjects
       .filter((s) => selectedSubjectIds.includes(s.id))
@@ -100,7 +164,7 @@ export const StudentAdd: React.FC = () => {
 
     addStudent({
       fullName: formData.fullName,
-      photo: formData.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+      photo: formData.photo || schoolSettings.logo,
       studentId: formData.studentId,
       admissionNumber: formData.admissionNumber,
       dateOfBirth: formData.dateOfBirth,
@@ -175,15 +239,27 @@ export const StudentAdd: React.FC = () => {
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Admitted Class *</label>
                 <select
+                  required
                   value={formData.classId}
-                  onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
+                  onChange={(e) => {
+                    const nextClass = classes.find((c) => c.id === e.target.value);
+                    setFormData({
+                      ...formData,
+                      classId: e.target.value,
+                      section: nextClass?.sections?.[0] || 'A',
+                    });
+                  }}
                   className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"
                 >
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.className}
-                    </option>
-                  ))}
+                  {classes.length === 0 ? (
+                    <option value="">-- Create a Class First --</option>
+                  ) : (
+                    classes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.className}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -195,7 +271,7 @@ export const StudentAdd: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, section: e.target.value })}
                     className="w-1/2 px-2 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"
                   >
-                    {selectedClass?.sections.map((s) => (
+                    {(selectedClass?.sections || ['A']).map((s) => (
                       <option key={s} value={s}>
                         {s}
                       </option>
@@ -349,13 +425,84 @@ export const StudentAdd: React.FC = () => {
           {/* Section 2: Personal Profile */}
           <div className="pt-4 border-t border-slate-100">
             <h4 className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3">2. Student Profile Details</h4>
+
+            {/* Student Photo Upload */}
+            <div className="mb-5 p-4 bg-slate-50/80 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center gap-4">
+              <div className="w-24 h-28 rounded-xl bg-white border-2 border-slate-200 shadow-xs shrink-0 overflow-hidden flex items-center justify-center">
+                {formData.photo ? (
+                  <img
+                    src={formData.photo}
+                    alt="Student Preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
+                    <Camera className="w-7 h-7 mb-1 text-slate-300" />
+                    <span className="text-[10px] font-medium leading-tight">No Photo Selected</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 w-full space-y-2 text-center sm:text-left">
+                <div>
+                  <label className="block text-xs font-bold text-[#172554]">
+                    Student Photo (For Profile, Admit Card & Student ID Card)
+                  </label>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Select a portrait image from your device. It will be displayed on this form, the student directory, admit cards, and the printable Student ID Card.
+                  </p>
+                </div>
+
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                />
+
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    icon={Upload}
+                    onClick={() => photoInputRef.current?.click()}
+                  >
+                    Choose File
+                  </Button>
+
+                  {formData.photo && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      icon={Trash2}
+                      onClick={() => {
+                        setFormData((prev) => ({ ...prev, photo: '' }));
+                        setSelectedFileName('');
+                        if (photoInputRef.current) photoInputRef.current.value = '';
+                      }}
+                      className="text-rose-600 border-rose-200 hover:bg-rose-50"
+                    >
+                      Remove Photo
+                    </Button>
+                  )}
+
+                  <span className="text-[11px] text-slate-500 font-medium truncate max-w-[220px]">
+                    {selectedFileName || 'JPG, PNG, WebP supported'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Student Full Name *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Ayman Sajid Rahman"
+                  placeholder="Enter student full name"
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"
@@ -399,17 +546,6 @@ export const StudentAdd: React.FC = () => {
                     </option>
                   ))}
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Student Photo URL</label>
-                <input
-                  type="url"
-                  placeholder="https://..."
-                  value={formData.photo}
-                  onChange={(e) => setFormData({ ...formData, photo: e.target.value })}
-                  className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 text-xs"
-                />
               </div>
             </div>
           </div>

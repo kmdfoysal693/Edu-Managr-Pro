@@ -3,7 +3,6 @@ import { useSchool } from '../../context/SchoolContext';
 import { AttendanceStatus } from '../../types';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Badge, getStatusBadgeVariant } from '../../components/common/Badge';
 import { StatCard } from '../../components/common/StatCard';
 import {
   GraduationCap,
@@ -22,9 +21,16 @@ export const StudentAttendance: React.FC = () => {
 
   const todayStr = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
-  const [selectedClassId, setSelectedClassId] = useState<string>(classes[9]?.id || classes[0]?.id || 'cls-10');
-  const [selectedSection, setSelectedSection] = useState<string>('A');
+  const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id || '');
+  const [selectedSection, setSelectedSection] = useState<string>('All');
   const [activeTab, setActiveTab] = useState<'sheet' | 'report'>('sheet');
+
+  React.useEffect(() => {
+    if ((!selectedClassId || !classes.some((c) => c.id === selectedClassId)) && classes[0]?.id) {
+      setSelectedClassId(classes[0].id);
+      setSelectedSection('All');
+    }
+  }, [classes, selectedClassId]);
 
   const currentClass = classes.find((c) => c.id === selectedClassId);
 
@@ -74,6 +80,10 @@ export const StudentAttendance: React.FC = () => {
   };
 
   const handleMarkAll = (status: AttendanceStatus) => {
+    if (classStudents.length === 0) {
+      showToast('warning', 'No Students Found', 'No students match the selected class or section.');
+      return;
+    }
     const updated: Record<string, { status: AttendanceStatus; notes: string }> = {};
     classStudents.forEach((st) => {
       updated[st.studentId] = {
@@ -91,6 +101,10 @@ export const StudentAttendance: React.FC = () => {
       status: val.status,
       notes: val.notes,
     }));
+    if (records.length === 0) {
+      showToast('warning', 'No Students to Save', 'Please select a class with enrolled students first.');
+      return;
+    }
     markStudentAttendance(records, selectedDate);
   };
 
@@ -137,6 +151,7 @@ export const StudentAttendance: React.FC = () => {
             onChange={(e) => setSelectedClassId(e.target.value)}
             className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20"
           >
+            {classes.length === 0 && <option value="">-- No Classes Available --</option>}
             {classes.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.className} ({c.classCode})
@@ -193,15 +208,15 @@ export const StudentAttendance: React.FC = () => {
 
           {/* Student Table */}
           <Card
-            title={`${currentClass?.className} - Section ${selectedSection} Attendance`}
+            title={`${currentClass?.className || 'Select Class'} - ${selectedSection === 'All' ? 'All Sections' : `Section ${selectedSection}`} Attendance`}
             subtitle={`Total ${classStudents.length} enrolled students found`}
             icon={GraduationCap}
             action={
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" icon={CheckCheck} onClick={() => handleMarkAll('Present')}>
+                <Button variant="outline" size="sm" icon={CheckCheck} onClick={() => handleMarkAll('Present')} disabled={classStudents.length === 0}>
                   All Present
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => handleMarkAll('Absent')}>
+                <Button variant="outline" size="sm" onClick={() => handleMarkAll('Absent')} disabled={classStudents.length === 0}>
                   All Absent
                 </Button>
               </div>
@@ -210,7 +225,7 @@ export const StudentAttendance: React.FC = () => {
             {classStudents.length === 0 ? (
               <div className="py-12 text-center text-slate-400">
                 <p className="text-sm font-medium">No students registered in this class/section yet.</p>
-                <p className="text-xs mt-1">Please select Class 10 (SSC Batch) to see enrolled students, or admit new students.</p>
+                <p className="text-xs mt-1">Please create a class and admit students to begin recording daily attendance.</p>
               </div>
             ) : (
               <div className="overflow-x-auto border border-slate-200 rounded-xl">
@@ -305,8 +320,8 @@ export const StudentAttendance: React.FC = () => {
       ) : (
         /* Monthly Attendance Report View */
         <Card
-          title={`Monthly Attendance Summary (${currentClass?.className})`}
-          subtitle="Overall attendance percentages and working days calculated"
+          title={`Monthly Attendance Summary (${currentClass?.className || 'All Classes'})`}
+          subtitle={`Calculated from recorded attendance entries for ${selectedDate.slice(0, 7)}`}
           icon={FileSpreadsheet}
         >
           <div className="overflow-x-auto border border-slate-200 rounded-xl">
@@ -315,7 +330,7 @@ export const StudentAttendance: React.FC = () => {
                 <tr>
                   <th className="px-4 py-3">Roll</th>
                   <th className="px-4 py-3">Student Name</th>
-                  <th className="px-4 py-3 text-center">Total Days</th>
+                  <th className="px-4 py-3 text-center">Recorded Days</th>
                   <th className="px-4 py-3 text-center text-emerald-700">Present</th>
                   <th className="px-4 py-3 text-center text-amber-700">Late</th>
                   <th className="px-4 py-3 text-center text-rose-700">Absent</th>
@@ -323,32 +338,51 @@ export const StudentAttendance: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {classStudents.map((st, i) => {
-                  const pres = 24 - (i % 3);
-                  const late = i % 2;
-                  const abs = 26 - pres - late;
-                  const rate = Math.round((pres / 26) * 100);
+                {classStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-10 text-center text-xs text-slate-400">
+                      No students enrolled in the selected class/section yet.
+                    </td>
+                  </tr>
+                ) : (
+                  classStudents.map((st) => {
+                    const monthPrefix = selectedDate.slice(0, 7);
+                    const records = studentAttendance.filter(
+                      (a) =>
+                        (a.studentId === st.studentId || a.studentId === st.id) &&
+                        a.date.startsWith(monthPrefix)
+                    );
+                    const totalDays = records.length;
+                    const pres = records.filter((r) => r.status === 'Present').length;
+                    const late = records.filter((r) => r.status === 'Late').length;
+                    const abs = records.filter((r) => r.status === 'Absent').length;
+                    const rate = totalDays > 0 ? Math.round(((pres + late) / totalDays) * 100) : 0;
 
-                  return (
-                    <tr key={st.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 font-mono font-bold text-slate-700">{st.rollNumber}</td>
-                      <td className="px-4 py-3 font-semibold text-[#172554]">{st.fullName}</td>
-                      <td className="px-4 py-3 text-center text-slate-500">26</td>
-                      <td className="px-4 py-3 text-center font-bold text-emerald-600">{pres}</td>
-                      <td className="px-4 py-3 text-center font-semibold text-amber-600">{late}</td>
-                      <td className="px-4 py-3 text-center font-semibold text-rose-600">{abs}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                            rate >= 90 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                          }`}
-                        >
-                          {rate}%
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                    return (
+                      <tr key={st.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 font-mono font-bold text-slate-700">{st.rollNumber}</td>
+                        <td className="px-4 py-3 font-semibold text-[#172554]">{st.fullName}</td>
+                        <td className="px-4 py-3 text-center text-slate-500">{totalDays}</td>
+                        <td className="px-4 py-3 text-center font-bold text-emerald-600">{pres}</td>
+                        <td className="px-4 py-3 text-center font-semibold text-amber-600">{late}</td>
+                        <td className="px-4 py-3 text-center font-semibold text-rose-600">{abs}</td>
+                        <td className="px-4 py-3 text-center">
+                          {totalDays > 0 ? (
+                            <span
+                              className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                rate >= 90 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                              }`}
+                            >
+                              {rate}%
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400">No records</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

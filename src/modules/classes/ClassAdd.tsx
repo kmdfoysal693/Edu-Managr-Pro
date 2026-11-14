@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSchool } from '../../context/SchoolContext';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { AcademicGroup, SubjectItem } from '../../types';
+import { AcademicGroup } from '../../types';
 import {
   Layers,
   Save,
@@ -10,9 +10,7 @@ import {
   Plus,
   X,
   BookOpen,
-  Sparkles,
   CheckCircle2,
-  BookmarkCheck,
   GraduationCap,
 } from 'lucide-react';
 
@@ -22,10 +20,10 @@ export const ClassAdd: React.FC = () => {
   const [formData, setFormData] = useState({
     className: '',
     classCode: '',
-    classTeacher: staff[0]?.fullName || 'Prof. Zahirul Haque',
+    classTeacher: staff[0]?.fullName || '',
     roomNumber: '201',
     maxStudents: 40,
-    academicYear: '2026',
+    academicYear: String(new Date().getFullYear()),
     status: 'Active' as 'Active' | 'Inactive',
     description: '',
   });
@@ -251,12 +249,13 @@ export const ClassAdd: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned Class Teacher *</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned Class Teacher</label>
               <select
                 value={formData.classTeacher}
                 onChange={(e) => setFormData({ ...formData, classTeacher: e.target.value })}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"
               >
+                <option value="">-- Optional / Assign Later --</option>
                 {staff.map((s) => (
                   <option key={s.id} value={s.fullName}>
                     {s.fullName} ({s.designation})

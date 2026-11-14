@@ -162,6 +162,9 @@ interface SchoolContextType {
   updateNotice: (id: string, not: Partial<Notice>) => void;
   deleteNotice: (id: string) => void;
   togglePinNotice: (id: string) => void;
+  isNoticePopupOpen: boolean;
+  openNoticePopup: () => void;
+  closeNoticePopup: () => void;
 
   // Teacher Salary & Advance System
   teacherSalaries: TeacherSalaryRecord[];
@@ -169,8 +172,11 @@ interface SchoolContextType {
   payTeacherSalary: (
     salaryId: string,
     paymentDetails: {
+      basicSalary?: number;
       bonus: number;
       bonusReason?: string;
+      giftAmount?: number;
+      giftReason?: string;
       allowances: number;
       advanceDeduction: number;
       paymentMethod: 'Cash' | 'Bank Transfer' | 'bKash' | 'Nagad' | 'Cheque';
@@ -208,7 +214,7 @@ interface SchoolContextType {
 
 const SchoolContext = createContext<SchoolContextType | undefined>(undefined);
 
-const STORAGE_PREFIX = 'edumanage_sms_';
+const STORAGE_PREFIX = 'edumanage_sms_clean_v1_';
 
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
@@ -233,6 +239,9 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+  const [isNoticePopupOpen, setIsNoticePopupOpen] = useState<boolean>(false);
+  const openNoticePopup = () => setIsNoticePopupOpen(true);
+  const closeNoticePopup = () => setIsNoticePopupOpen(false);
 
   const [userProfile, setUserProfile] = useState<UserProfile>(() => loadFromStorage('profile', initialUserProfile));
   const [schoolSettings, setSchoolSettings] = useState<InstitutionSettings>(() => {
@@ -333,19 +342,19 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } else if (lowerMod.includes('student') || lowerAct.includes('student')) {
       actionRoute = 'student-list';
     } else if (lowerMod.includes('salary') || lowerMod.includes('payroll')) {
-      actionRoute = 'teacher-salary-sheet';
+      actionRoute = 'finance-salary';
     } else if (lowerMod.includes('advance')) {
-      actionRoute = 'teacher-salary-advance';
+      actionRoute = 'finance-salary';
     } else if (lowerMod.includes('fund') || lowerMod.includes('transfer')) {
       actionRoute = 'finance-fund-transfer';
     } else if (lowerMod.includes('exam') && (lowerMod.includes('routine') || lowerAct.includes('routine'))) {
-      actionRoute = 'exam-routine-list';
+      actionRoute = 'exam-routine';
     } else if (lowerMod.includes('exam')) {
-      actionRoute = 'exam-list';
+      actionRoute = 'exam-manage';
     } else if (lowerMod.includes('attendance')) {
-      actionRoute = 'attendance-dashboard';
+      actionRoute = 'attendance-student';
     } else if (lowerMod.includes('finance') || lowerMod.includes('account')) {
-      actionRoute = 'finance-dashboard';
+      actionRoute = 'finance-monthly-fee';
     } else if (lowerMod.includes('notice')) {
       actionRoute = 'notice-board';
     }
@@ -709,7 +718,7 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         studentId: std?.studentId || r.studentId,
         studentName: std?.fullName || 'Student',
         rollNumber: std?.rollNumber || '00',
-        classId: std?.classId || 'cls-1',
+        classId: std?.classId || '',
         className: std?.className || 'Class',
         section: std?.section || 'A',
         date: targetDate,
@@ -949,8 +958,11 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const payTeacherSalary = (
     salaryId: string,
     paymentDetails: {
+      basicSalary?: number;
       bonus: number;
       bonusReason?: string;
+      giftAmount?: number;
+      giftReason?: string;
       allowances: number;
       advanceDeduction: number;
       paymentMethod: 'Cash' | 'Bank Transfer' | 'bKash' | 'Nagad' | 'Cheque';
@@ -964,18 +976,28 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return;
     }
 
-    const netPayable = Math.max(0, target.basicSalary + paymentDetails.bonus + paymentDetails.allowances - paymentDetails.advanceDeduction);
-    const receiptNum = target.receiptNumber || 'SAL-2026-' + Math.floor(1000 + Math.random() * 9000);
+    const effectiveBasic = paymentDetails.basicSalary !== undefined ? Math.max(0, paymentDetails.basicSalary) : target.basicSalary;
+    const giftAmt = Math.max(0, paymentDetails.giftAmount || 0);
+    const giftReasonClean = giftAmt > 0 ? (paymentDetails.giftReason?.trim() || 'Gift Money') : undefined;
+    const bonusAmt = Math.max(0, paymentDetails.bonus || 0);
+    const allowancesAmt = Math.max(0, paymentDetails.allowances || 0);
+    const deductionAmt = Math.max(0, paymentDetails.advanceDeduction || 0);
+
+    const netPayable = Math.max(0, effectiveBasic + bonusAmt + giftAmt + allowancesAmt - deductionAmt);
+    const receiptNum = target.receiptNumber || 'SAL-' + target.year + '-' + Math.floor(1000 + Math.random() * 9000);
 
     setTeacherSalaries((prev) =>
       prev.map((s) =>
         s.id === salaryId
           ? {
               ...s,
-              bonus: paymentDetails.bonus,
+              basicSalary: effectiveBasic,
+              bonus: bonusAmt,
               bonusReason: paymentDetails.bonusReason,
-              allowances: paymentDetails.allowances,
-              advanceDeduction: paymentDetails.advanceDeduction,
+              giftAmount: giftAmt,
+              giftReason: giftReasonClean,
+              allowances: allowancesAmt,
+              advanceDeduction: deductionAmt,
               netPayable,
               status: 'Completed',
               paymentDate: paymentDetails.paymentDate,
@@ -988,11 +1010,11 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     );
 
     // If advance deduction was applied, deduct from active advance
-    if (paymentDetails.advanceDeduction > 0) {
+    if (deductionAmt > 0) {
       setAdvanceSalaries((prev) =>
         prev.map((adv) => {
           if (adv.staffId === target.staffId && adv.status === 'Active') {
-            const newRecovered = adv.recoveredAmount + paymentDetails.advanceDeduction;
+            const newRecovered = adv.recoveredAmount + deductionAmt;
             const newRemaining = Math.max(0, adv.amount - newRecovered);
             return {
               ...adv,
@@ -1008,6 +1030,14 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Auto-create salary expense transaction so it subtracts from institutional earnings
     const receiptNumExp = 'SAL-TX-' + Math.floor(1000 + Math.random() * 9000);
+    const noteParts = [
+      `Basic: BDT ${effectiveBasic.toLocaleString()}`,
+      bonusAmt > 0 ? `Bonus: BDT ${bonusAmt.toLocaleString()}` : null,
+      giftAmt > 0 ? `Gift (${giftReasonClean}): BDT ${giftAmt.toLocaleString()}` : null,
+      allowancesAmt > 0 ? `Allowances: BDT ${allowancesAmt.toLocaleString()}` : null,
+      deductionAmt > 0 ? `Advance Deducted: BDT ${deductionAmt.toLocaleString()}` : null,
+    ].filter(Boolean);
+
     const newTx: FinancialTransaction = {
       id: 'tx-' + Date.now(),
       receiptNumber: receiptNumExp,
@@ -1020,7 +1050,7 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       partyName: target.teacherName,
       partyId: target.staffId,
       category: 'Salaries',
-      notes: `Basic: BDT ${target.basicSalary.toLocaleString()} | Bonus: BDT ${paymentDetails.bonus.toLocaleString()} | Advance Deducted: BDT ${paymentDetails.advanceDeduction.toLocaleString()}`,
+      notes: noteParts.join(' | '),
     };
     setTransactions((prev) => [newTx, ...prev]);
 
@@ -1068,12 +1098,86 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const addTeacherSalary = (data: Omit<TeacherSalaryRecord, 'id'>) => {
+    const basicAmt = Math.max(0, Number(data.basicSalary) || 0);
+    const bonusAmt = Math.max(0, Number(data.bonus) || 0);
+    const giftAmt = Math.max(0, Number(data.giftAmount) || 0);
+    const giftReasonClean = giftAmt > 0 ? (data.giftReason?.trim() || 'Gift Money') : undefined;
+    const allowancesAmt = Math.max(0, Number(data.allowances) || 0);
+    const deductionAmt = Math.max(0, Number(data.advanceDeduction) || 0);
+    const netPayable = Math.max(0, basicAmt + bonusAmt + giftAmt + allowancesAmt - deductionAmt);
+    const isCompleted = data.status === 'Completed';
+    const paymentDate = data.paymentDate || new Date().toISOString().split('T')[0];
+    const paymentMethod = data.paymentMethod || 'Bank Transfer';
+    const receiptNum = isCompleted
+      ? data.receiptNumber || `SAL-${data.year || new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`
+      : undefined;
+
     const newSalary: TeacherSalaryRecord = {
       ...data,
       id: 'sal-' + Date.now(),
+      basicSalary: basicAmt,
+      bonus: bonusAmt,
+      giftAmount: giftAmt,
+      giftReason: giftReasonClean,
+      allowances: allowancesAmt,
+      advanceDeduction: deductionAmt,
+      netPayable,
+      paymentDate: isCompleted ? paymentDate : data.paymentDate,
+      paymentMethod: isCompleted ? paymentMethod : data.paymentMethod,
+      receiptNumber: receiptNum,
     };
     setTeacherSalaries((prev) => [newSalary, ...prev]);
-    showToast('success', 'Salary Record Added', `Salary entry generated for ${data.teacherName}.`);
+
+    if (isCompleted) {
+      if (deductionAmt > 0) {
+        setAdvanceSalaries((prev) =>
+          prev.map((adv) => {
+            if (adv.staffId === data.staffId && adv.status === 'Active') {
+              const newRecovered = adv.recoveredAmount + deductionAmt;
+              const newRemaining = Math.max(0, adv.amount - newRecovered);
+              return {
+                ...adv,
+                recoveredAmount: newRecovered,
+                remainingBalance: newRemaining,
+                status: newRemaining === 0 ? 'Settled' : 'Active',
+              };
+            }
+            return adv;
+          })
+        );
+      }
+
+      const receiptNumExp = 'SAL-TX-' + Math.floor(1000 + Math.random() * 9000);
+      const noteParts = [
+        `Basic: BDT ${basicAmt.toLocaleString()}`,
+        bonusAmt > 0 ? `Bonus: BDT ${bonusAmt.toLocaleString()}` : null,
+        giftAmt > 0 ? `Gift (${giftReasonClean}): BDT ${giftAmt.toLocaleString()}` : null,
+        allowancesAmt > 0 ? `Allowances: BDT ${allowancesAmt.toLocaleString()}` : null,
+        deductionAmt > 0 ? `Advance Deducted: BDT ${deductionAmt.toLocaleString()}` : null,
+      ].filter(Boolean);
+
+      const newTx: FinancialTransaction = {
+        id: 'tx-' + Date.now(),
+        receiptNumber: receiptNumExp,
+        feeType: 'Teacher Salary',
+        title: `Teacher Salary - ${data.teacherName} (${data.month})`,
+        amount: netPayable,
+        date: paymentDate,
+        paymentMethod,
+        status: 'Paid',
+        partyName: data.teacherName,
+        partyId: data.staffId,
+        category: 'Salaries',
+        notes: noteParts.join(' | '),
+      };
+      setTransactions((prev) => [newTx, ...prev]);
+
+      logActivity('Teacher Salary Paid', `Disbursed BDT ${netPayable.toLocaleString()} to ${data.teacherName} for ${data.month}`, 'Finances');
+      showToast('success', 'Salary Disbursed Successfully', `BDT ${netPayable.toLocaleString()} paid to ${data.teacherName}.`);
+    } else {
+      logActivity('Salary Entry Added', `Added salary entry of BDT ${netPayable.toLocaleString()} for ${data.teacherName} (${data.month})`, 'Finances');
+      showToast('success', 'Salary Record Added', `Salary entry generated for ${data.teacherName}.`);
+    }
   };
 
   const deleteTeacherSalary = (id: string) => {
@@ -1105,6 +1209,7 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           year,
           basicSalary: basic,
           bonus: 0,
+          giftAmount: 0,
           allowances: 0,
           advanceDeduction: proposedDeduction,
           netPayable: net,
@@ -1126,14 +1231,17 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Notices
   const addNotice = (data: Omit<Notice, 'id'>) => {
-    const newNotice: Notice = { ...data, id: 'not-' + Date.now() };
+    const nowIso = new Date().toISOString();
+    const newNotice: Notice = { ...data, id: 'not-' + Date.now(), updatedAt: nowIso };
     setNotices((prev) => [newNotice, ...prev]);
     logActivity('Notice Published', `Published: ${newNotice.title}`, 'Notice');
     showToast('success', 'Notice Published', `Notice "${newNotice.title}" has been published.`);
   };
 
   const updateNotice = (id: string, data: Partial<Notice>) => {
-    setNotices((prev) => prev.map((n) => (n.id === id ? { ...n, ...data } : n)));
+    const nowIso = new Date().toISOString();
+    setNotices((prev) => prev.map((n) => (n.id === id ? { ...n, ...data, updatedAt: nowIso } : n)));
+    logActivity('Notice Updated', `Updated notice details${data.title ? `: ${data.title}` : ''}`, 'Notice');
     showToast('success', 'Notice Updated', 'Notice details updated.');
   };
 
@@ -1143,12 +1251,13 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const togglePinNotice = (id: string) => {
+    const nowIso = new Date().toISOString();
     setNotices((prev) =>
       prev.map((n) => {
         if (n.id === id) {
           const nextPinned = !n.isPinned;
           showToast('info', nextPinned ? 'Notice Pinned' : 'Notice Unpinned', `Notice pin status toggled.`);
-          return { ...n, isPinned: nextPinned };
+          return { ...n, isPinned: nextPinned, updatedAt: nowIso };
         }
         return n;
       })
@@ -1180,6 +1289,7 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       publishStatus: 'Published',
       isPinned: false,
       author: data.transferredBy || userProfile.name,
+      updatedAt: new Date().toISOString(),
     };
     setNotices((prev) => [transferNotice, ...prev]);
 
@@ -1229,7 +1339,7 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setNotices(initialNotices);
     setActivityLogs(initialActivityLogs);
     setNotifications(initialNotifications);
-    showToast('success', 'System Reset', 'Demo data reloaded to pristine state.');
+    showToast('success', 'System Reset', 'All workspace data has been cleared to an empty state.');
   };
 
   return (
@@ -1353,6 +1463,9 @@ export const SchoolProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         updateNotice,
         deleteNotice,
         togglePinNotice,
+        isNoticePopupOpen,
+        openNoticePopup,
+        closeNoticePopup,
 
         notifications,
         unreadNotificationsCount,

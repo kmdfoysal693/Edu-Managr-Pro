@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSchool } from '../../context/SchoolContext';
 import { NAVIGATION_ITEMS, MenuItem } from '../../config/navigation';
-import { ChevronDown, ChevronRight, School, PanelLeftClose, PanelLeft, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeft, X } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const {

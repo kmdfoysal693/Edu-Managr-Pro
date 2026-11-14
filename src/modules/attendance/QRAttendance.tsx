@@ -16,10 +16,6 @@ import {
   Printer,
   Sparkles,
   School,
-  ArrowRight,
-  ShieldCheck,
-  Search,
-  UserCheck,
 } from 'lucide-react';
 import { printElement } from '../../utils/printUtils';
 
@@ -191,6 +187,7 @@ export const QRAttendance: React.FC = () => {
             variant="outline"
             size="sm"
             icon={Printer}
+            disabled={students.length === 0 && staff.length === 0}
             onClick={() => {
               const firstStudent = students[0];
               if (firstStudent) {
@@ -202,10 +199,22 @@ export const QRAttendance: React.FC = () => {
                   roleOrClass: `${firstStudent.className} • Roll ${firstStudent.rollNumber}`,
                   phone: firstStudent.fatherPhone,
                 });
+                return;
+              }
+              const firstStaff = staff[0];
+              if (firstStaff) {
+                setSelectedPersonForCard({
+                  name: firstStaff.fullName,
+                  id: firstStaff.staffId,
+                  type: 'Staff',
+                  photo: firstStaff.photo,
+                  roleOrClass: `${firstStaff.designation} (${firstStaff.department})`,
+                  phone: firstStaff.phoneNumber,
+                });
               }
             }}
           >
-            Generate Sample QR ID Card
+            Preview QR ID Card
           </Button>
         </div>
       </div>
@@ -295,7 +304,7 @@ export const QRAttendance: React.FC = () => {
                     type="text"
                     value={scanInput}
                     onChange={(e) => setScanInput(e.target.value)}
-                    placeholder="Scan barcode or type ID (e.g., STD-2026-001 or STF-1001)..."
+                    placeholder="Scan barcode or type registered Student / Staff ID..."
                     className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
                     autoFocus
                   />
@@ -319,6 +328,11 @@ export const QRAttendance: React.FC = () => {
               <p className="text-xs font-medium text-slate-500">Quick Test Candidates:</p>
 
               <div className="space-y-2">
+                {students.length === 0 && staff.length === 0 && (
+                  <div className="py-8 px-4 text-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 text-xs text-slate-400">
+                    No registered students or staff yet. Add records to generate and test QR passes.
+                  </div>
+                )}
                 {students.slice(0, 3).map((std) => (
                   <div
                     key={std.id}
@@ -482,7 +496,7 @@ export const QRAttendance: React.FC = () => {
                 </div>
                 <div className="text-right text-[10px] text-blue-200">
                   <p className="font-semibold text-white">Scan for Biometric Entry</p>
-                  <p>Valid Academic Year 2026</p>
+                  <p>Session: {schoolSettings.academicSession}</p>
                   <p className="text-[9px] text-blue-300 mt-1">Authorized Principal Seal Verified</p>
                 </div>
               </div>

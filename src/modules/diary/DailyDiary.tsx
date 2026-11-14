@@ -1,32 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSchool } from '../../context/SchoolContext';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { BookOpen, Save, ArrowLeft } from 'lucide-react';
 
 export const DailyDiary: React.FC = () => {
-  const { classes, staff, addDiaryEntry, setCurrentRoute } = useSchool();
+  const { classes, staff, addDiaryEntry, setCurrentRoute, showToast } = useSchool();
 
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
-    classId: classes[9]?.id || classes[0]?.id || 'cls-10',
-    section: 'A',
-    subject: 'Higher Mathematics',
-    teacherName: staff[0]?.fullName || 'Dr. Ashraful Kabir',
+    classId: classes[0]?.id || '',
+    section: classes[0]?.sections?.[0] || 'A',
+    subject: '',
+    teacherName: staff[0]?.fullName || '',
     lessonTitle: '',
     homework: '',
     instructions: '',
     submissionDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
   });
 
+  useEffect(() => {
+    if ((!formData.classId || !classes.some((c) => c.id === formData.classId)) && classes[0]) {
+      setFormData((prev) => ({
+        ...prev,
+        classId: classes[0].id,
+        section: classes[0].sections?.[0] || 'A',
+      }));
+    }
+  }, [classes, formData.classId]);
+
+  useEffect(() => {
+    if (!formData.teacherName && staff[0]?.fullName) {
+      setFormData((prev) => ({ ...prev, teacherName: staff[0].fullName }));
+    }
+  }, [staff, formData.teacherName]);
+
   const selectedClass = classes.find((c) => c.id === formData.classId);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.classId || !selectedClass) {
+      showToast('error', 'No Class Available', 'Please create a class before publishing a diary entry.');
+      return;
+    }
     addDiaryEntry({
       date: formData.date,
       classId: formData.classId,
-      className: selectedClass?.className || 'Class',
+      className: selectedClass.className,
       section: formData.section,
       subject: formData.subject,
       teacherName: formData.teacherName,
@@ -67,10 +87,19 @@ export const DailyDiary: React.FC = () => {
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Select Class *</label>
               <select
+                required
                 value={formData.classId}
-                onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
+                onChange={(e) => {
+                  const cls = classes.find((c) => c.id === e.target.value);
+                  setFormData({
+                    ...formData,
+                    classId: e.target.value,
+                    section: cls?.sections?.[0] || 'A',
+                  });
+                }}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"
               >
+                {classes.length === 0 && <option value="">-- Create a Class First --</option>}
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.className}
@@ -86,7 +115,7 @@ export const DailyDiary: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, section: e.target.value })}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"
               >
-                {selectedClass?.sections.map((s) => (
+                {(selectedClass?.sections || ['A']).map((s) => (
                   <option key={s} value={s}>
                     Section {s}
                   </option>
@@ -99,7 +128,7 @@ export const DailyDiary: React.FC = () => {
               <input
                 type="text"
                 required
-                placeholder="e.g. Higher Mathematics"
+                placeholder="e.g. Mathematics"
                 value={formData.subject}
                 onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"
@@ -107,18 +136,29 @@ export const DailyDiary: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Teacher *</label>
-              <select
-                value={formData.teacherName}
-                onChange={(e) => setFormData({ ...formData, teacherName: e.target.value })}
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"
-              >
-                {staff.map((s) => (
-                  <option key={s.id} value={s.fullName}>
-                    {s.fullName}
-                  </option>
-                ))}
-              </select>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Teacher</label>
+              {staff.length > 0 ? (
+                <select
+                  value={formData.teacherName}
+                  onChange={(e) => setFormData({ ...formData, teacherName: e.target.value })}
+                  className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"
+                >
+                  <option value="">-- Select Teacher --</option>
+                  {staff.map((s) => (
+                    <option key={s.id} value={s.fullName}>
+                      {s.fullName}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  placeholder="Enter teacher name"
+                  value={formData.teacherName}
+                  onChange={(e) => setFormData({ ...formData, teacherName: e.target.value })}
+                  className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"
+                />
+              )}
             </div>
 
             <div>

@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSchool } from '../../context/SchoolContext';
 import { FinancialTransaction } from '../../types';
-import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge, getStatusBadgeVariant } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
@@ -13,16 +12,14 @@ import {
   Coins,
   PlusCircle,
   Receipt,
-  Eye,
   CheckCircle2,
   Clock,
-  Printer,
   Save,
   Filter,
 } from 'lucide-react';
 
 export const ExamFee: React.FC = () => {
-  const { transactions, students, classes, exams, addTransaction, updateTransaction } = useSchool();
+  const { transactions, students, classes, addTransaction, updateTransaction, showToast } = useSchool();
 
   const [filterStatus, setFilterStatus] = useState<'All' | 'Paid' | 'Pending'>('All');
   const [filterClass, setFilterClass] = useState<string>('All');
@@ -31,13 +28,13 @@ export const ExamFee: React.FC = () => {
 
   // Form for collecting exam fee
   const [formData, setFormData] = useState({
-    studentId: students[0]?.studentId || 'STD-2026-001',
-    examTitle: 'Annual Final Examination Fee 2026',
-    amount: 1500,
+    studentId: students[0]?.studentId || '',
+    examTitle: '',
+    amount: 0,
     paymentMethod: 'bKash' as 'Cash' | 'bKash' | 'Nagad' | 'Bank Transfer' | 'Cheque',
     status: 'Paid' as 'Paid' | 'Pending',
     date: new Date().toISOString().split('T')[0],
-    notes: 'Cleared at front accounts counter',
+    notes: '',
   });
 
   const examFeeTx = transactions.filter((t) => t.feeType === 'Exam Fee');
@@ -54,9 +51,24 @@ export const ExamFee: React.FC = () => {
 
   const fmtBDT = (val: number) => `BDT ${val.toLocaleString('en-BD')}`;
 
+  useEffect(() => {
+    if ((!formData.studentId || !students.some((s) => s.studentId === formData.studentId)) && students[0]?.studentId) {
+      setFormData((prev) => ({ ...prev, studentId: students[0].studentId }));
+    }
+  }, [students, formData.studentId, isAddPaymentModalOpen]);
+
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const st = students.find((s) => s.studentId === formData.studentId);
+    if (!st) {
+      showToast('error', 'No Student Selected', 'Please admit and select a student before recording fees.');
+      return;
+    }
+    const amt = Number(formData.amount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      showToast('error', 'Invalid Amount', 'Please enter a fee amount greater than 0.');
+      return;
+    }
     addTransaction({
       feeType: 'Exam Fee',
       title: formData.examTitle,
@@ -64,9 +76,9 @@ export const ExamFee: React.FC = () => {
       date: formData.date,
       paymentMethod: formData.paymentMethod,
       status: formData.status,
-      partyName: st?.fullName || 'Student',
-      partyId: formData.studentId,
-      classInfo: `${st?.className || 'Class'} - Sec ${st?.section || 'A'}`,
+      partyName: st.fullName,
+      partyId: st.studentId,
+      classInfo: `${st.className} - Sec ${st.section}`,
       notes: formData.notes,
     });
     setIsAddPaymentModalOpen(false);
@@ -244,6 +256,7 @@ export const ExamFee: React.FC = () => {
               <input
                 type="text"
                 required
+                placeholder="e.g. Final Examination Fee"
                 value={formData.examTitle}
                 onChange={(e) => setFormData({ ...formData, examTitle: e.target.value })}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
@@ -255,8 +268,8 @@ export const ExamFee: React.FC = () => {
               <input
                 type="number"
                 required
-                min="100"
-                value={formData.amount}
+                min="1"
+                value={formData.amount || ''}
                 onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
               />

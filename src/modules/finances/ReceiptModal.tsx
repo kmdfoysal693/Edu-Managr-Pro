@@ -3,7 +3,7 @@ import { FinancialTransaction } from '../../types';
 import { Modal } from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
 import { useSchool } from '../../context/SchoolContext';
-import { School, Printer, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { Printer, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 import { printElement } from '../../utils/printUtils';
 
 interface ReceiptModalProps {
@@ -160,7 +160,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ transaction, onClose
               <p className="font-semibold text-slate-600">{isPaid ? 'Depositor Signature' : 'Student / Depositor'}</p>
             </div>
             <div className="text-center">
-              <div className="font-script text-base text-blue-900 italic font-bold">K. Hasan</div>
+              <div className="h-6" />
               <div className="w-32 border-b border-slate-800 mb-1" />
               <p className="font-bold text-[#172554]">Authorized Bursar / Accounts</p>
             </div>

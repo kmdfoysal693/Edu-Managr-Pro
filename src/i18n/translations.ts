@@ -365,7 +365,7 @@ const enTranslations: Record<string, string> = {
     'exam.showing_count': 'Showing {filtered} of {total} exam records',
 };
 
-export const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
+const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
   en: enTranslations,
   bn: enTranslations,
 

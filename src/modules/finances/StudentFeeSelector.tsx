@@ -4,13 +4,7 @@ import { Student } from '../../types';
 import {
   Search,
   Filter,
-  GraduationCap,
-  Users,
-  CheckCircle2,
   X,
-  Phone,
-  UserCheck,
-  Sparkles,
 } from 'lucide-react';
 
 interface StudentFeeSelectorProps {
@@ -253,14 +247,20 @@ export const StudentFeeSelector: React.FC<StudentFeeSelectorProps> = ({
           </select>
         ) : (
           <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-200 flex items-center justify-between">
-            <span>No student found for this class or search filter.</span>
-            <button
-              type="button"
-              onClick={handleClearFilters}
-              className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
-            >
-              Reset Filters
-            </button>
+            <span>
+              {students.length === 0
+                ? 'No students admitted yet. Please admit a student first to collect fees.'
+                : 'No student found for this class or search filter.'}
+            </span>
+            {students.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
         )}
       </div>

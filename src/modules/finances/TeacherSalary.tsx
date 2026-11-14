@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSchool } from '../../context/SchoolContext';
-import { TeacherSalaryRecord, AdvanceSalaryRecord } from '../../types';
+import { TeacherSalaryRecord } from '../../types';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
@@ -10,56 +10,82 @@ import {
   PlusCircle,
   Printer,
   CheckCircle2,
-  Clock,
   AlertCircle,
   FileText,
   DollarSign,
-  TrendingDown,
-  Gift,
   HandCoins,
   RefreshCw,
   Search,
-  Filter,
-  Eye,
   Check,
   Calendar,
-  Building2,
-  Phone,
-  Mail,
-  MapPin,
   Trash2,
-  UserCheck,
   ArrowLeftRight,
+  Gift,
 } from 'lucide-react';
 import { printElement } from '../../utils/printUtils';
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+const GIFT_REASON_PRESETS = [
+  'Eid Bonus',
+  'Work Performance',
+  'Festival Gift',
+  'Best Attendance Award',
+  'Extra Duty / Overtime Gift',
+  'Annual Appreciation Gift',
+  'Custom Reason',
+] as const;
 
 export const TeacherSalary: React.FC = () => {
   const {
     staff,
     teacherSalaries,
     advanceSalaries,
-    fundTransfers,
     schoolSettings,
     payTeacherSalary,
+    addTeacherSalary,
     disburseAdvanceSalary,
     createMonthlySalarySheet,
     deleteTeacherSalary,
     setCurrentRoute,
     departments: schoolDepts,
+    showToast,
     language,
-    t,
   } = useSchool();
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<'sheet' | 'advances'>('sheet');
 
+  const nowDate = new Date();
+  const currentMonthName = MONTH_NAMES[nowDate.getMonth()];
+  const currentYear = nowDate.getFullYear();
+  const currentMonthLabel = `${currentMonthName} ${currentYear}`;
+
+  // Unique months available
+  const availableMonths = Array.from(new Set(teacherSalaries.map((s) => s.month)));
+  if (!availableMonths.includes(currentMonthLabel)) availableMonths.unshift(currentMonthLabel);
+
   // Filters
-  const [selectedMonth, setSelectedMonth] = useState<string>('November 2026');
+  const [selectedMonth, setSelectedMonth] = useState<string>(availableMonths[0] || currentMonthLabel);
   const [filterStatus, setFilterStatus] = useState<'All' | 'Completed' | 'Pending'>('All');
   const [selectedDept, setSelectedDept] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Modals state
+  const [isAddSalaryModalOpen, setIsAddSalaryModalOpen] = useState(false);
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [selectedSalaryToPay, setSelectedSalaryToPay] = useState<TeacherSalaryRecord | null>(null);
 
@@ -67,32 +93,165 @@ export const TeacherSalary: React.FC = () => {
   const [isPrintSheetModalOpen, setIsPrintSheetModalOpen] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState<TeacherSalaryRecord | null>(null);
 
+  // Add Direct Salary Form State
+  const [addSalaryForm, setAddSalaryForm] = useState({
+    staffId: staff[0]?.id || '',
+    billingMonthName: currentMonthName,
+    billingYear: currentYear,
+    basicSalary: staff[0]?.salary || 0,
+    giftAmount: 0,
+    giftReason: 'Eid Bonus',
+    customGiftReason: '',
+    allowances: 0,
+    advanceDeduction: 0,
+    status: 'Completed' as 'Completed' | 'Pending',
+    paymentMethod: 'Bank Transfer' as 'Cash' | 'Bank Transfer' | 'bKash' | 'Nagad' | 'Cheque',
+    paymentDate: nowDate.toISOString().split('T')[0],
+    notes: '',
+  });
+
   // Pay Salary Form State
   const [payFormData, setPayFormData] = useState({
     bonus: 0,
-    bonusReason: 'Performance Bonus',
+    bonusReason: '',
+    giftAmount: 0,
+    giftReason: 'Eid Bonus',
+    customGiftReason: '',
     allowances: 0,
     advanceDeduction: 0,
     paymentMethod: 'Bank Transfer' as 'Cash' | 'Bank Transfer' | 'bKash' | 'Nagad' | 'Cheque',
-    paymentDate: new Date().toISOString().split('T')[0],
-    notes: 'Approved and cleared in full',
+    paymentDate: nowDate.toISOString().split('T')[0],
+    notes: '',
   });
 
   // Grant Advance Form State
   const [advanceFormData, setAdvanceFormData] = useState({
-    staffId: staff[0]?.id || 'STF-1001',
-    amount: 15000,
-    monthlyDeduction: 3000,
-    reason: 'Medical & Family Expense',
+    staffId: staff[0]?.id || '',
+    amount: 0,
+    monthlyDeduction: 0,
+    reason: '',
     paymentMethod: 'Bank Transfer' as 'Cash' | 'Bank Transfer' | 'bKash',
-    disbursementDate: new Date().toISOString().split('T')[0],
-    approvedBy: 'Dr. Mahmudur Rahman (Principal)',
+    disbursementDate: nowDate.toISOString().split('T')[0],
+    approvedBy: '',
   });
 
-  // Unique months available
-  const availableMonths = Array.from(new Set(teacherSalaries.map((s) => s.month)));
-  if (!availableMonths.includes('November 2026')) availableMonths.unshift('November 2026');
-  if (!availableMonths.includes('December 2026')) availableMonths.push('December 2026');
+  useEffect(() => {
+    if ((!advanceFormData.staffId || !staff.some((s) => s.id === advanceFormData.staffId)) && staff[0]?.id) {
+      setAdvanceFormData((prev) => ({ ...prev, staffId: staff[0].id }));
+    }
+  }, [staff, advanceFormData.staffId, isAdvanceModalOpen]);
+
+  // Helper to get suggested advance deduction for a staff member
+  const getActiveAdvance = (staffId: string) =>
+    advanceSalaries.find((a) => a.staffId === staffId && a.status === 'Active');
+
+  const handleOpenAddSalaryModal = () => {
+    const parts = selectedMonth.split(' ');
+    const parsedMonth = MONTH_NAMES.includes(parts[0]) ? parts[0] : currentMonthName;
+    const parsedYear = Number(parts[1]) || currentYear;
+    const defaultStaff = staff[0];
+    const activeAdv = defaultStaff ? getActiveAdvance(defaultStaff.id) : undefined;
+    const suggestedDed = activeAdv ? Math.min(activeAdv.monthlyDeduction, activeAdv.remainingBalance) : 0;
+
+    setAddSalaryForm({
+      staffId: defaultStaff?.id || '',
+      billingMonthName: parsedMonth,
+      billingYear: parsedYear,
+      basicSalary: defaultStaff?.salary || 0,
+      giftAmount: 0,
+      giftReason: 'Eid Bonus',
+      customGiftReason: '',
+      allowances: 0,
+      advanceDeduction: suggestedDed,
+      status: 'Completed',
+      paymentMethod: 'Bank Transfer',
+      paymentDate: new Date().toISOString().split('T')[0],
+      notes: '',
+    });
+    setIsAddSalaryModalOpen(true);
+  };
+
+  const handleAddFormStaffChange = (newStaffId: string) => {
+    const chosen = staff.find((st) => st.id === newStaffId);
+    const activeAdv = getActiveAdvance(newStaffId);
+    const suggestedDed = activeAdv ? Math.min(activeAdv.monthlyDeduction, activeAdv.remainingBalance) : 0;
+    setAddSalaryForm((prev) => ({
+      ...prev,
+      staffId: newStaffId,
+      basicSalary: chosen?.salary || 0,
+      advanceDeduction: suggestedDed,
+    }));
+  };
+
+  const handleAddSalarySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const chosenStaff = staff.find((st) => st.id === addSalaryForm.staffId);
+    if (!chosenStaff) {
+      showToast('error', 'No Staff Selected', 'Please select or register a teacher/staff member first.');
+      return;
+    }
+
+    const basicAmt = Math.max(0, Number(addSalaryForm.basicSalary) || 0);
+    const giftAmt = Math.max(0, Number(addSalaryForm.giftAmount) || 0);
+    const allowancesAmt = Math.max(0, Number(addSalaryForm.allowances) || 0);
+    const deductionAmt = Math.max(0, Number(addSalaryForm.advanceDeduction) || 0);
+
+    if (basicAmt <= 0 && giftAmt <= 0 && allowancesAmt <= 0) {
+      showToast('error', 'Amount Required', 'Enter a basic salary, gift money, or allowance greater than 0.');
+      return;
+    }
+
+    const resolvedGiftReason =
+      giftAmt > 0
+        ? addSalaryForm.giftReason === 'Custom Reason'
+          ? addSalaryForm.customGiftReason.trim() || 'Special Gift'
+          : addSalaryForm.giftReason
+        : undefined;
+
+    const targetMonthLabel = `${addSalaryForm.billingMonthName} ${addSalaryForm.billingYear}`;
+    const existingPending = teacherSalaries.find(
+      (s) => s.staffId === chosenStaff.id && s.month === targetMonthLabel && s.status === 'Pending'
+    );
+
+    if (existingPending && addSalaryForm.status === 'Completed') {
+      payTeacherSalary(existingPending.id, {
+        basicSalary: basicAmt,
+        bonus: existingPending.bonus || 0,
+        bonusReason: existingPending.bonusReason,
+        giftAmount: giftAmt,
+        giftReason: resolvedGiftReason,
+        allowances: allowancesAmt,
+        advanceDeduction: deductionAmt,
+        paymentMethod: addSalaryForm.paymentMethod,
+        paymentDate: addSalaryForm.paymentDate,
+        notes: addSalaryForm.notes.trim() || existingPending.notes || 'Monthly salary disbursed',
+      });
+    } else {
+      const netPayable = Math.max(0, basicAmt + giftAmt + allowancesAmt - deductionAmt);
+      addTeacherSalary({
+        staffId: chosenStaff.id,
+        teacherName: chosenStaff.fullName,
+        designation: chosenStaff.designation,
+        department: chosenStaff.department,
+        month: targetMonthLabel,
+        year: Number(addSalaryForm.billingYear) || currentYear,
+        basicSalary: basicAmt,
+        bonus: 0,
+        giftAmount: giftAmt,
+        giftReason: resolvedGiftReason,
+        allowances: allowancesAmt,
+        advanceDeduction: deductionAmt,
+        netPayable,
+        status: addSalaryForm.status,
+        paymentDate: addSalaryForm.status === 'Completed' ? addSalaryForm.paymentDate : undefined,
+        paymentMethod: addSalaryForm.status === 'Completed' ? addSalaryForm.paymentMethod : undefined,
+        notes: addSalaryForm.notes.trim() || (giftAmt > 0 ? `Includes gift: ${resolvedGiftReason}` : undefined),
+      });
+    }
+
+    setSelectedMonth(targetMonthLabel);
+    setIsAddSalaryModalOpen(false);
+  };
 
   // Filtered salary records for active month
   const monthSalaries = teacherSalaries.filter((s) => s.month === selectedMonth);
@@ -107,7 +266,10 @@ export const TeacherSalary: React.FC = () => {
   });
 
   // Stats calculation
-  const totalMonthlyBill = monthSalaries.reduce((sum, s) => sum + s.basicSalary + s.bonus + s.allowances, 0);
+  const totalMonthlyBill = monthSalaries.reduce(
+    (sum, s) => sum + s.basicSalary + s.bonus + (s.giftAmount || 0) + s.allowances,
+    0
+  );
   const totalCompletedAmount = monthSalaries.filter((s) => s.status === 'Completed').reduce((sum, s) => sum + s.netPayable, 0);
   const completedCount = monthSalaries.filter((s) => s.status === 'Completed').length;
 
@@ -128,9 +290,15 @@ export const TeacherSalary: React.FC = () => {
     const activeAdv = advanceSalaries.find((a) => a.staffId === salary.staffId && a.status === 'Active');
     const suggestedDeduction = activeAdv ? Math.min(activeAdv.monthlyDeduction, activeAdv.remainingBalance) : 0;
 
+    const existingGiftReason = salary.giftReason || 'Eid Bonus';
+    const isPresetGift = GIFT_REASON_PRESETS.includes(existingGiftReason as any) && existingGiftReason !== 'Custom Reason';
+
     setPayFormData({
       bonus: salary.bonus || 0,
-      bonusReason: salary.bonusReason || 'Monthly Performance Bonus',
+      bonusReason: salary.bonusReason || 'Performance Bonus',
+      giftAmount: salary.giftAmount || 0,
+      giftReason: isPresetGift ? existingGiftReason : 'Custom Reason',
+      customGiftReason: isPresetGift ? '' : existingGiftReason,
       allowances: salary.allowances || 0,
       advanceDeduction: suggestedDeduction,
       paymentMethod: salary.paymentMethod || 'Bank Transfer',
@@ -145,9 +313,19 @@ export const TeacherSalary: React.FC = () => {
     e.preventDefault();
     if (!selectedSalaryToPay) return;
 
+    const giftAmt = Math.max(0, Number(payFormData.giftAmount) || 0);
+    const resolvedGiftReason =
+      giftAmt > 0
+        ? payFormData.giftReason === 'Custom Reason'
+          ? payFormData.customGiftReason.trim() || 'Special Gift'
+          : payFormData.giftReason
+        : undefined;
+
     payTeacherSalary(selectedSalaryToPay.id, {
       bonus: Number(payFormData.bonus),
       bonusReason: payFormData.bonusReason,
+      giftAmount: giftAmt,
+      giftReason: resolvedGiftReason,
       allowances: Number(payFormData.allowances),
       advanceDeduction: Number(payFormData.advanceDeduction),
       paymentMethod: payFormData.paymentMethod,
@@ -163,16 +341,29 @@ export const TeacherSalary: React.FC = () => {
   const handleAdvanceSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const st = staff.find((s) => s.id === advanceFormData.staffId);
-    if (!st) return;
+    if (!st) {
+      showToast('error', 'No Staff Selected', 'Please register a teacher or staff member first.');
+      return;
+    }
+    const amt = Number(advanceFormData.amount);
+    const ded = Number(advanceFormData.monthlyDeduction);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      showToast('error', 'Invalid Advance Amount', 'Advance amount must be greater than 0.');
+      return;
+    }
+    if (!Number.isFinite(ded) || ded <= 0 || ded > amt) {
+      showToast('error', 'Invalid Monthly Deduction', 'Monthly installment must be between 1 and total loan amount.');
+      return;
+    }
 
     disburseAdvanceSalary({
       staffId: st.id,
       teacherName: st.fullName,
       designation: st.designation,
-      amount: Number(advanceFormData.amount),
+      amount: amt,
       requestDate: new Date().toISOString().split('T')[0],
       disbursementDate: advanceFormData.disbursementDate,
-      monthlyDeduction: Number(advanceFormData.monthlyDeduction),
+      monthlyDeduction: ded,
       reason: advanceFormData.reason,
       paymentMethod: advanceFormData.paymentMethod,
       approvedBy: advanceFormData.approvedBy,
@@ -183,7 +374,11 @@ export const TeacherSalary: React.FC = () => {
 
   // Generate Current Month Sheet
   const handleGenerateSheet = () => {
-    createMonthlySalarySheet(selectedMonth, 2026);
+    if (staff.length === 0) {
+      showToast('warning', 'No Faculty Registered', 'Please add teachers or staff before generating a monthly salary sheet.');
+      return;
+    }
+    createMonthlySalarySheet(selectedMonth, currentYear);
   };
 
   // Unique departments
@@ -225,6 +420,15 @@ export const TeacherSalary: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleOpenAddSalaryModal}
+            className="flex items-center gap-1.5 font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            <PlusCircle className="w-4 h-4" />
+            Add Salary
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -403,6 +607,7 @@ export const TeacherSalary: React.FC = () => {
                     <th className="py-3 px-3">Teacher / Staff Member</th>
                     <th className="py-3 px-3">Designation & Dept</th>
                     <th className="py-3 px-3 text-right">Basic Salary</th>
+                    <th className="py-3 px-3 text-right">Gift Money</th>
                     <th className="py-3 px-3 text-right">Bonus</th>
                     <th className="py-3 px-3 text-right">Allowances</th>
                     <th className="py-3 px-3 text-right">Advance Deducted</th>
@@ -414,8 +619,17 @@ export const TeacherSalary: React.FC = () => {
                 <tbody className="divide-y divide-slate-100">
                   {filteredSalaries.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-12 text-center text-slate-400">
-                        No salary records match the selected filters for {selectedMonth}.
+                      <td colSpan={11} className="py-12 text-center text-slate-400">
+                        <p className="mb-3">No salary records match the selected filters for {selectedMonth}.</p>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={handleOpenAddSalaryModal}
+                          className="inline-flex items-center gap-1.5 font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                          <PlusCircle className="w-4 h-4" />
+                          Add Salary
+                        </Button>
                       </td>
                     </tr>
                   ) : (
@@ -456,6 +670,18 @@ export const TeacherSalary: React.FC = () => {
                           </td>
                           <td className="py-3 px-3 text-right font-mono font-semibold text-slate-700">
                             {fmtBDT(s.basicSalary)}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono">
+                            {(s.giftAmount || 0) > 0 ? (
+                              <div>
+                                <span className="font-bold text-violet-700">+{fmtBDT(s.giftAmount || 0)}</span>
+                                {s.giftReason && (
+                                  <p className="text-[10px] text-violet-500 font-sans font-semibold">{s.giftReason}</p>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-300">—</span>
+                            )}
                           </td>
                           <td className="py-3 px-3 text-right font-mono">
                             {s.bonus > 0 ? (
@@ -641,6 +867,329 @@ export const TeacherSalary: React.FC = () => {
         )}
       </Card>
 
+      {/* MODAL 0: Add Teacher / Staff Monthly Salary Modal */}
+      <Modal
+        isOpen={isAddSalaryModalOpen}
+        onClose={() => setIsAddSalaryModalOpen(false)}
+        title="Add Teacher & Staff Salary"
+        maxWidth="2xl"
+      >
+        {staff.length === 0 ? (
+          <div className="py-8 text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+              <Banknote className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-[#172554]">No Teachers or Staff Registered</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                Add at least one teacher or staff member before creating or disbursing a monthly salary.
+              </p>
+            </div>
+            <div className="flex justify-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setIsAddSalaryModalOpen(false)}>
+                Close
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setIsAddSalaryModalOpen(false);
+                  setCurrentRoute('staff-add');
+                }}
+              >
+                Go to Add Staff Member
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleAddSalarySubmit} className="space-y-4 text-xs sm:text-sm">
+            {/* Staff Selection + Month/Year */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Select Teacher / Staff Member <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  required
+                  value={addSalaryForm.staffId}
+                  onChange={(e) => handleAddFormStaffChange(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-800"
+                >
+                  {staff.map((st) => (
+                    <option key={st.id} value={st.id}>
+                      {st.fullName} — {st.designation} ({st.department})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Month</label>
+                  <select
+                    value={addSalaryForm.billingMonthName}
+                    onChange={(e) => setAddSalaryForm({ ...addSalaryForm, billingMonthName: e.target.value })}
+                    className="w-full px-2.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                  >
+                    {MONTH_NAMES.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Year</label>
+                  <input
+                    type="number"
+                    min="2020"
+                    max="2050"
+                    value={addSalaryForm.billingYear}
+                    onChange={(e) => setAddSalaryForm({ ...addSalaryForm, billingYear: Number(e.target.value) })}
+                    className="w-full px-2.5 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Duplicate / Existing month record notice */}
+            {(() => {
+              const targetMonth = `${addSalaryForm.billingMonthName} ${addSalaryForm.billingYear}`;
+              const existingRecord = teacherSalaries.find(
+                (s) => s.staffId === addSalaryForm.staffId && s.month === targetMonth
+              );
+              if (!existingRecord) return null;
+              return (
+                <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  {existingRecord.status === 'Pending' ? (
+                    <span>
+                      A <strong>Pending</strong> sheet entry exists for <strong>{targetMonth}</strong>. Selecting <strong>Completed</strong> will update and pay that entry directly.
+                    </span>
+                  ) : (
+                    <span>
+                      Salary for <strong>{targetMonth}</strong> is already marked <strong>Completed</strong>. Submitting will record an additional entry.
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Basic Salary & Allowances */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Monthly Basic Salary (BDT)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="500"
+                  value={addSalaryForm.basicSalary}
+                  onChange={(e) => setAddSalaryForm({ ...addSalaryForm, basicSalary: Number(e.target.value) })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-[#172554]"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Other Allowances (BDT)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="500"
+                  value={addSalaryForm.allowances}
+                  onChange={(e) => setAddSalaryForm({ ...addSalaryForm, allowances: Number(e.target.value) })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-600"
+                />
+              </div>
+            </div>
+
+            {/* Gift Money Option Section */}
+            <div className="bg-violet-50/70 p-3.5 rounded-xl border border-violet-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-violet-900 flex items-center gap-1.5">
+                  <Gift className="w-4 h-4 text-violet-600" />
+                  Gift Money (Eid Bonus, Work Performance, Festival Gift, etc.)
+                </span>
+                <span className="text-[11px] font-semibold text-violet-700 bg-violet-100 px-2 py-0.5 rounded-md">
+                  Optional
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-violet-900 mb-1">
+                    Gift Amount (BDT)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="500"
+                    value={addSalaryForm.giftAmount}
+                    onChange={(e) => setAddSalaryForm({ ...addSalaryForm, giftAmount: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-lg border border-violet-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 font-mono font-bold text-violet-700"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-violet-900 mb-1">
+                    Gift Category / Reason
+                  </label>
+                  <select
+                    value={addSalaryForm.giftReason}
+                    onChange={(e) => setAddSalaryForm({ ...addSalaryForm, giftReason: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-violet-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 font-semibold text-slate-800"
+                  >
+                    {GIFT_REASON_PRESETS.map((reason) => (
+                      <option key={reason} value={reason}>
+                        {reason}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {addSalaryForm.giftReason === 'Custom Reason' && (
+                <div>
+                  <label className="block font-semibold text-violet-900 mb-1">
+                    Specify Custom Gift Purpose
+                  </label>
+                  <input
+                    type="text"
+                    value={addSalaryForm.customGiftReason}
+                    onChange={(e) => setAddSalaryForm({ ...addSalaryForm, customGiftReason: e.target.value })}
+                    placeholder="e.g. Excellent Board Exam Result, Festival Appreciation..."
+                    className="w-full px-3 py-2 rounded-lg border border-violet-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Advance Deduction */}
+            <div className="bg-amber-50/70 p-3.5 rounded-xl border border-amber-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-amber-900 flex items-center gap-1.5">
+                  <HandCoins className="w-4 h-4 text-amber-600" />
+                  Advance Salary Loan Deduction (BDT)
+                </span>
+                {(() => {
+                  const activeAdv = getActiveAdvance(addSalaryForm.staffId);
+                  return activeAdv ? (
+                    <span className="text-[11px] font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md">
+                      Active Loan Balance: {fmtBDT(activeAdv.remainingBalance)}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-slate-400">No active advance loan</span>
+                  );
+                })()}
+              </div>
+              <input
+                type="number"
+                min="0"
+                value={addSalaryForm.advanceDeduction}
+                onChange={(e) => setAddSalaryForm({ ...addSalaryForm, advanceDeduction: Number(e.target.value) })}
+                className="w-full px-3 py-2 rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono font-bold text-rose-600"
+              />
+            </div>
+
+            {/* Live Net Summary */}
+            {(() => {
+              const basicVal = Number(addSalaryForm.basicSalary) || 0;
+              const giftVal = Number(addSalaryForm.giftAmount) || 0;
+              const allowVal = Number(addSalaryForm.allowances) || 0;
+              const dedVal = Number(addSalaryForm.advanceDeduction) || 0;
+              const netVal = Math.max(0, basicVal + giftVal + allowVal - dedVal);
+              return (
+                <div className="p-3.5 rounded-xl bg-blue-900 text-white flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs text-blue-200 block uppercase font-bold tracking-wider">
+                      Total Net Payable Salary
+                    </span>
+                    <span className="text-[11px] text-blue-300">
+                      Basic ({fmtBDT(basicVal)}) + Gift ({fmtBDT(giftVal)}) + Allowances ({fmtBDT(allowVal)}) - Advance ({fmtBDT(dedVal)})
+                    </span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-2xl font-black font-mono text-emerald-400">
+                      {fmtBDT(netVal)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Payment Status, Method & Date */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Payment Status
+                </label>
+                <select
+                  value={addSalaryForm.status}
+                  onChange={(e) => setAddSalaryForm({ ...addSalaryForm, status: e.target.value as 'Completed' | 'Pending' })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-800"
+                >
+                  <option value="Completed">Completed (Disburse Now)</option>
+                  <option value="Pending">Pending (Save to Sheet)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Disbursement Method
+                </label>
+                <select
+                  value={addSalaryForm.paymentMethod}
+                  onChange={(e) => setAddSalaryForm({ ...addSalaryForm, paymentMethod: e.target.value as any })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                >
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="bKash">bKash Payroll</option>
+                  <option value="Nagad">Nagad Payroll</option>
+                  <option value="Cash">Cash Voucher</option>
+                  <option value="Cheque">Account Payee Cheque</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Payment Date
+                </label>
+                <input
+                  type="date"
+                  value={addSalaryForm.paymentDate}
+                  onChange={(e) => setAddSalaryForm({ ...addSalaryForm, paymentDate: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Salary Notes / Remarks
+              </label>
+              <input
+                type="text"
+                value={addSalaryForm.notes}
+                onChange={(e) => setAddSalaryForm({ ...addSalaryForm, notes: e.target.value })}
+                placeholder="Optional voucher notes (e.g. Includes Eid festival gift & performance appreciation)"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsAddSalaryModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                className="font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                {addSalaryForm.status === 'Completed' ? 'Save & Pay Salary' : 'Save Pending Entry'}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
       {/* MODAL 1: Pay Teacher Salary Modal */}
       <Modal
         isOpen={isPayModalOpen}
@@ -693,8 +1242,8 @@ export const TeacherSalary: React.FC = () => {
                   onChange={(e) => setPayFormData({ ...payFormData, bonusReason: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                 >
-                  <option value="Eid Festival Bonus">Eid Festival Bonus</option>
                   <option value="Performance Bonus">Performance Bonus</option>
+                  <option value="Eid Festival Bonus">Eid Festival Bonus</option>
                   <option value="Annual Increment Bonus">Annual Increment Bonus</option>
                   <option value="Olympiad / Debate Coaching">Olympiad / Debate Coaching</option>
                   <option value="Special Honorarium">Special Honorarium</option>
@@ -713,6 +1262,64 @@ export const TeacherSalary: React.FC = () => {
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold text-blue-600"
                 />
               </div>
+            </div>
+
+            {/* Gift Money Option Section */}
+            <div className="bg-violet-50/70 p-3.5 rounded-xl border border-violet-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-violet-900 flex items-center gap-1.5">
+                  <Gift className="w-4 h-4 text-violet-600" />
+                  Gift Money (Eid Bonus, Work Performance, etc.)
+                </span>
+                <span className="text-[11px] font-semibold text-violet-700 bg-violet-100 px-2 py-0.5 rounded-md">
+                  Optional
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-violet-900 mb-1">
+                    Gift Amount (BDT)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="500"
+                    value={payFormData.giftAmount}
+                    onChange={(e) => setPayFormData({ ...payFormData, giftAmount: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-lg border border-violet-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 font-mono font-bold text-violet-700"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-violet-900 mb-1">
+                    Gift Purpose / Reason
+                  </label>
+                  <select
+                    value={payFormData.giftReason}
+                    onChange={(e) => setPayFormData({ ...payFormData, giftReason: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-violet-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 font-semibold text-slate-800"
+                  >
+                    {GIFT_REASON_PRESETS.map((reason) => (
+                      <option key={reason} value={reason}>
+                        {reason}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {payFormData.giftReason === 'Custom Reason' && (
+                <div>
+                  <label className="block font-semibold text-violet-900 mb-1">
+                    Specify Custom Gift Purpose
+                  </label>
+                  <input
+                    type="text"
+                    value={payFormData.customGiftReason}
+                    onChange={(e) => setPayFormData({ ...payFormData, customGiftReason: e.target.value })}
+                    placeholder="e.g. Outstanding class result gift..."
+                    className="w-full px-3 py-2 rounded-lg border border-violet-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Advance Deduction section */}
@@ -758,6 +1365,7 @@ export const TeacherSalary: React.FC = () => {
                 0,
                 selectedSalaryToPay.basicSalary +
                   Number(payFormData.bonus) +
+                  Number(payFormData.giftAmount) +
                   Number(payFormData.allowances) -
                   Number(payFormData.advanceDeduction)
               );
@@ -768,7 +1376,7 @@ export const TeacherSalary: React.FC = () => {
                       Net Payable to Teacher
                     </span>
                     <span className="text-[11px] text-blue-300">
-                      Basic ({fmtBDT(selectedSalaryToPay.basicSalary)}) + Bonus ({fmtBDT(payFormData.bonus)}) - Advance ({fmtBDT(payFormData.advanceDeduction)})
+                      Basic ({fmtBDT(selectedSalaryToPay.basicSalary)}) + Gift ({fmtBDT(payFormData.giftAmount)}) + Bonus ({fmtBDT(payFormData.bonus)}) - Advance ({fmtBDT(payFormData.advanceDeduction)})
                     </span>
                   </div>
                   <div className="text-right">
@@ -1073,7 +1681,7 @@ export const TeacherSalary: React.FC = () => {
                     <th className="border border-slate-300 p-1.5 text-left">Teacher Name & Designation</th>
                     <th className="border border-slate-300 p-1.5 w-20">Month/Year</th>
                     <th className="border border-slate-300 p-1.5 text-right w-20">Basic (BDT)</th>
-                    <th className="border border-slate-300 p-1.5 text-right w-20">Bonus & Allow (BDT)</th>
+                    <th className="border border-slate-300 p-1.5 text-right w-24">Gift, Bonus & Allow (BDT)</th>
                     <th className="border border-slate-300 p-1.5 text-right w-20">Adv Deduct (BDT)</th>
                     <th className="border border-slate-300 p-1.5 text-right w-24">Net Paid (BDT)</th>
                     <th className="border border-slate-300 p-1.5 w-20">Status</th>
@@ -1083,7 +1691,7 @@ export const TeacherSalary: React.FC = () => {
                 <tbody className="divide-y divide-slate-200">
                   {monthSalaries.map((s, idx) => {
                     const isCompleted = s.status === 'Completed';
-                    const bonusTotal = s.bonus + s.allowances;
+                    const bonusTotal = s.bonus + (s.giftAmount || 0) + s.allowances;
                     return (
                       <tr key={s.id} className="text-slate-800">
                         {/* 1. SL */}
@@ -1118,9 +1726,20 @@ export const TeacherSalary: React.FC = () => {
                         <td className="border border-slate-300 p-1.5 text-right font-mono font-semibold">
                           {s.basicSalary.toLocaleString()}
                         </td>
-                        {/* 6. Bonus & Allowances */}
+                        {/* 6. Gift, Bonus & Allowances */}
                         <td className="border border-slate-300 p-1.5 text-right font-mono text-emerald-700">
-                          {bonusTotal > 0 ? bonusTotal.toLocaleString() : '—'}
+                          {bonusTotal > 0 ? (
+                            <div>
+                              <span>{bonusTotal.toLocaleString()}</span>
+                              {(s.giftAmount || 0) > 0 && s.giftReason && (
+                                <span className="block text-[9px] text-violet-700 font-sans">
+                                  Gift: {s.giftReason}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            '—'
+                          )}
                         </td>
                         {/* 7. Advance Deducted */}
                         <td className="border border-slate-300 p-1.5 text-right font-mono text-rose-700">
@@ -1167,7 +1786,7 @@ export const TeacherSalary: React.FC = () => {
                       {monthSalaries.reduce((sum, s) => sum + s.basicSalary, 0).toLocaleString()}
                     </td>
                     <td className="border border-slate-300 p-2 text-right font-mono text-emerald-700">
-                      {monthSalaries.reduce((sum, s) => sum + s.bonus + s.allowances, 0).toLocaleString()}
+                      {monthSalaries.reduce((sum, s) => sum + s.bonus + (s.giftAmount || 0) + s.allowances, 0).toLocaleString()}
                     </td>
                     <td className="border border-slate-300 p-2 text-right font-mono text-rose-700">
                       -{monthSalaries.reduce((sum, s) => sum + s.advanceDeduction, 0).toLocaleString()}
@@ -1288,6 +1907,12 @@ export const TeacherSalary: React.FC = () => {
                   <div className="flex justify-between py-1 border-b border-slate-100 text-emerald-700">
                     <span>Bonus ({selectedVoucher.bonusReason || 'Incentive'})</span>
                     <span className="font-mono font-semibold">+{fmtBDT(selectedVoucher.bonus)}</span>
+                  </div>
+                )}
+                {(selectedVoucher.giftAmount || 0) > 0 && (
+                  <div className="flex justify-between py-1 border-b border-slate-100 text-violet-700">
+                    <span>Gift Money ({selectedVoucher.giftReason || 'Special Gift'})</span>
+                    <span className="font-mono font-semibold">+{fmtBDT(selectedVoucher.giftAmount || 0)}</span>
                   </div>
                 )}
                 {selectedVoucher.allowances > 0 && (

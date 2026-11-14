@@ -3,7 +3,6 @@ import { useSchool } from '../../context/SchoolContext';
 import { AcademicEvent, EventCategory } from '../../types';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import {
@@ -15,7 +14,6 @@ import {
   MapPin,
   Calendar as CalendarIcon,
   Filter,
-  Users,
   Edit,
   Trash2,
   Save,
@@ -24,7 +22,11 @@ import {
 export const AcademicCalendar: React.FC = () => {
   const { academicEvents, addAcademicEvent, updateAcademicEvent, deleteAcademicEvent } = useSchool();
 
-  const [currentMonthDate, setCurrentMonthDate] = useState(new Date(2026, 10, 1)); // Nov 2026
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [currentMonthDate, setCurrentMonthDate] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [viewMode, setViewMode] = useState<'month' | 'agenda'>('month');
 
@@ -37,10 +39,10 @@ export const AcademicCalendar: React.FC = () => {
   const [formData, setFormData] = useState({
     title: '',
     category: 'Examination' as EventCategory,
-    startDate: '2026-11-15',
-    endDate: '2026-11-20',
+    startDate: todayStr,
+    endDate: todayStr,
     time: '09:00 AM - 12:30 PM',
-    location: 'Main Auditorium & Exam Halls',
+    location: '',
     description: '',
     status: 'Upcoming' as 'Upcoming' | 'Ongoing' | 'Completed',
     targetAudience: 'All' as 'All' | 'Students' | 'Teachers' | 'Parents',
@@ -90,10 +92,10 @@ export const AcademicCalendar: React.FC = () => {
     setFormData({
       title: '',
       category: 'Examination',
-      startDate: '2026-11-15',
-      endDate: '2026-11-20',
+      startDate: todayStr,
+      endDate: todayStr,
       time: '09:00 AM - 12:30 PM',
-      location: 'Campus Grounds',
+      location: '',
       description: '',
       status: 'Upcoming',
       targetAudience: 'All',
@@ -189,10 +191,13 @@ export const AcademicCalendar: React.FC = () => {
                 <ChevronLeft className="w-4 h-4 text-slate-600" />
               </button>
               <button
-                onClick={() => setCurrentMonthDate(new Date(2026, 10, 1))}
+                onClick={() => {
+                  const now = new Date();
+                  setCurrentMonthDate(new Date(now.getFullYear(), now.getMonth(), 1));
+                }}
                 className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer"
               >
-                Current (Nov 2026)
+                Current Month
               </button>
               <button
                 onClick={nextMonth}
@@ -230,7 +235,7 @@ export const AcademicCalendar: React.FC = () => {
                 return dateStr >= e.startDate && dateStr <= e.endDate;
               });
 
-              const isToday = dateStr === '2026-10-31';
+              const isToday = dateStr === todayStr;
 
               return (
                 <div
@@ -275,6 +280,12 @@ export const AcademicCalendar: React.FC = () => {
       ) : (
         /* Agenda List View */
         <div className="space-y-3">
+          {filteredEvents.length === 0 && (
+            <Card className="py-10 text-center text-slate-400">
+              <p className="text-sm font-semibold text-slate-600">No academic events scheduled yet</p>
+              <p className="text-xs mt-1">Click &quot;Schedule Event&quot; to add examinations, holidays, or parent meetings.</p>
+            </Card>
+          )}
           {filteredEvents.map((evt) => {
             const theme = getCategoryTheme(evt.category);
 

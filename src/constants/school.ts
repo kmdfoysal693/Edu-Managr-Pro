@@ -17,14 +17,3 @@ export const DEFAULT_SCHOOL_SETTINGS: InstitutionSettings = {
   language: 'en',
   timezone: 'Asia/Dhaka',
 };
-
-export const SCHOOL_NAME = DEFAULT_SCHOOL_SETTINGS.schoolName;
-export const SCHOOL_FULL_NAME = DEFAULT_SCHOOL_SETTINGS.institutionName;
-export const SCHOOL_TAGLINE = DEFAULT_SCHOOL_SETTINGS.tagline;
-export const SCHOOL_ESTD = DEFAULT_SCHOOL_SETTINGS.establishedYear;
-export const SCHOOL_EIIN = DEFAULT_SCHOOL_SETTINGS.eiin;
-export const SCHOOL_ADDRESS = DEFAULT_SCHOOL_SETTINGS.address;
-export const SCHOOL_PHONE = DEFAULT_SCHOOL_SETTINGS.phone;
-export const SCHOOL_EMAIL = DEFAULT_SCHOOL_SETTINGS.email;
-export const SCHOOL_LOGO = DEFAULT_SCHOOL_SETTINGS.logo;
-

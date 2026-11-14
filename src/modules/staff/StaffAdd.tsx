@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSchool } from '../../context/SchoolContext';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
-import { Briefcase, Save, ArrowLeft, Plus, Building2 } from 'lucide-react';
+import { Briefcase, Save, ArrowLeft, Plus, Building2, Camera, Upload, Trash2 } from 'lucide-react';
 
 export const StaffAdd: React.FC = () => {
-  const { addStaff, setCurrentRoute, departments, addDepartment, language, t } = useSchool();
+  const { addStaff, setCurrentRoute, departments, addDepartment, schoolSettings, showToast } = useSchool();
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string>('');
 
   const [isQuickDeptOpen, setIsQuickDeptOpen] = useState(false);
   const [quickDeptForm, setQuickDeptForm] = useState({
@@ -20,28 +22,84 @@ export const StaffAdd: React.FC = () => {
 
   const [formData, setFormData] = useState({
     fullName: '',
-    photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+    photo: '',
     staffId: `STF-${Math.floor(1000 + Math.random() * 9000)}`,
     designation: '',
-    department: departments[0]?.name || 'Science',
+    department: departments[0]?.name || '',
     phoneNumber: '',
     email: '',
     address: '',
     gender: 'Male' as 'Male' | 'Female' | 'Other',
-    dateOfBirth: '1985-05-15',
+    dateOfBirth: '',
     joiningDate: new Date().toISOString().split('T')[0],
-    salary: 45000,
+    salary: 0,
     employmentStatus: 'Permanent' as 'Permanent' | 'Contractual' | 'Probation' | 'Inactive',
     emergencyContactName: '',
     emergencyContactRelation: '',
     emergencyContactPhone: '',
   });
 
+  useEffect(() => {
+    if ((!formData.department || !departments.some((d) => d.name === formData.department)) && departments[0]?.name) {
+      setFormData((prev) => ({ ...prev, department: departments[0].name }));
+    }
+  }, [departments, formData.department]);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('error', 'Invalid Image File', 'Please select a valid image file (JPG, PNG, WebP).');
+      return;
+    }
+    setSelectedFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (!dataUrl) return;
+      // Resize large camera photos cleanly so localStorage stays fast and crisp on ID cards
+      if (file.size > 350 * 1024 && file.type !== 'image/svg+xml') {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 600;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            setFormData((prev) => ({ ...prev, photo: canvas.toDataURL('image/jpeg', 0.85) }));
+          } else {
+            setFormData((prev) => ({ ...prev, photo: dataUrl }));
+          }
+        };
+        img.src = dataUrl;
+      } else {
+        setFormData((prev) => ({ ...prev, photo: dataUrl }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.department) {
+      showToast('error', 'Department Required', 'Please create or select a department first.');
+      return;
+    }
     addStaff({
       fullName: formData.fullName,
-      photo: formData.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+      photo: formData.photo || schoolSettings.logo,
       staffId: formData.staffId,
       designation: formData.designation,
       department: formData.department,
@@ -79,6 +137,77 @@ export const StaffAdd: React.FC = () => {
           {/* Section: Basic Information */}
           <div>
             <h4 className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3">1. Basic Profile</h4>
+
+            {/* Staff Photo Upload */}
+            <div className="mb-5 p-4 bg-slate-50/80 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center gap-4">
+              <div className="w-24 h-28 rounded-xl bg-white border-2 border-slate-200 shadow-xs shrink-0 overflow-hidden flex items-center justify-center">
+                {formData.photo ? (
+                  <img
+                    src={formData.photo}
+                    alt="Staff Preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
+                    <Camera className="w-7 h-7 mb-1 text-slate-300" />
+                    <span className="text-[10px] font-medium leading-tight">No Photo Selected</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 w-full space-y-2 text-center sm:text-left">
+                <div>
+                  <label className="block text-xs font-bold text-[#172554]">
+                    Staff Member Photo (For Profile & Staff ID Card)
+                  </label>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Select a portrait image from your device. It will be displayed on this form, the directory, and the printable Staff Smart ID Card.
+                  </p>
+                </div>
+
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                />
+
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    icon={Upload}
+                    onClick={() => photoInputRef.current?.click()}
+                  >
+                    Choose File
+                  </Button>
+
+                  {formData.photo && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      icon={Trash2}
+                      onClick={() => {
+                        setFormData((prev) => ({ ...prev, photo: '' }));
+                        setSelectedFileName('');
+                        if (photoInputRef.current) photoInputRef.current.value = '';
+                      }}
+                      className="text-rose-600 border-rose-200 hover:bg-rose-50"
+                    >
+                      Remove Photo
+                    </Button>
+                  )}
+
+                  <span className="text-[11px] text-slate-500 font-medium truncate max-w-[220px]">
+                    {selectedFileName || 'JPG, PNG, WebP supported'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name *</label>
@@ -140,15 +269,20 @@ export const StaffAdd: React.FC = () => {
                   </button>
                 </div>
                 <select
+                  required
                   value={formData.department}
                   onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                   className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"
                 >
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.name}>
-                      {d.name} {d.bengaliName ? `(${d.bengaliName})` : ''} — {d.category}
-                    </option>
-                  ))}
+                  {departments.length === 0 ? (
+                    <option value="">-- Click "+ New Dept" to Create Department --</option>
+                  ) : (
+                    departments.map((d) => (
+                      <option key={d.id} value={d.name}>
+                        {d.name} {d.bengaliName ? `(${d.bengaliName})` : ''} — {d.category}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -186,8 +320,8 @@ export const StaffAdd: React.FC = () => {
                 <input
                   type="number"
                   required
-                  min="5000"
-                  step="1000"
+                  min="0"
+                  step="500"
                   value={formData.salary}
                   onChange={(e) => setFormData({ ...formData, salary: Number(e.target.value) })}
                   className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"
@@ -247,7 +381,7 @@ export const StaffAdd: React.FC = () => {
                 <input
                   type="email"
                   required
-                  placeholder="faculty@oakridge-edu.ac.bd"
+                  placeholder="staff@school.edu"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"

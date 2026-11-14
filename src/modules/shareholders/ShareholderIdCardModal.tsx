@@ -6,18 +6,14 @@ import { Button } from '../../components/common/Button';
 import { useSchool } from '../../context/SchoolContext';
 import {
   Printer,
-  School,
   ShieldCheck,
-  Phone,
   Mail,
   MapPin,
-  Calendar,
   Layers,
   Sparkles,
   CheckCircle,
   Coins,
   Percent,
-  Award,
   Crown,
 } from 'lucide-react';
 import { printElement } from '../../utils/printUtils';
@@ -264,12 +260,11 @@ export const ShareholderIdCardModal: React.FC<ShareholderIdCardModalProps> = ({
                     <div className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
                       <ShieldCheck className="w-3 h-3 text-emerald-600" /> ACCREDITED
                     </div>
-                    <p className="text-[8px] text-slate-400 mt-0.5">Valid Thru: AGM 2028</p>
+                    <p className="text-[8px] text-slate-400 mt-0.5">Session: {schoolSettings.academicSession}</p>
                   </div>
 
                   <div className="text-center">
-                    <div className="font-script text-xs text-slate-900 font-black italic">Dr. A. K. Choudhury</div>
-                    <div className="w-24 border-b border-slate-700 mx-auto" />
+                    <div className="w-24 border-b border-slate-700 mx-auto pt-3" />
                     <p className="text-[7.5px] font-bold text-slate-700 uppercase mt-0.5">
                       Chairman, Board of Trustees
                     </p>

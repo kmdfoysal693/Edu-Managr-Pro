@@ -306,6 +306,8 @@ export interface TeacherSalaryRecord {
   basicSalary: number;
   bonus: number;
   bonusReason?: string;
+  giftAmount?: number;
+  giftReason?: string;
   allowances: number;
   advanceDeduction: number;
   netPayable: number;
@@ -383,6 +385,7 @@ export interface Notice {
   isPinned: boolean;
   attachmentName?: string;
   author: string;
+  updatedAt?: string;
 }
 
 export interface ActivityLog {

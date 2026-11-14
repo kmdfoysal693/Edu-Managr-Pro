@@ -3,17 +3,9 @@ import { useSchool } from '../../context/SchoolContext';
 import { DayOfWeek, ClassRoutineItem } from '../../types';
 import {
   CalendarClock,
-  CalendarPlus,
   Printer,
   Edit2,
   Trash2,
-  Clock,
-  DoorOpen,
-  Users,
-  Layers,
-  BookOpen,
-  Filter,
-  Check,
   X,
   Sparkles,
   CalendarDays,
@@ -41,21 +33,22 @@ export const ClassRoutineList: React.FC = () => {
     addClassRoutinesBatch,
     getSubjectsForClassAndGroup,
     setCurrentRoute,
+    showToast,
   } = useSchool();
 
-  const [selectedClassId, setSelectedClassId] = useState<string>(classes[7]?.id || classes[0]?.id || 'cls-8');
+  const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id || '');
   const [selectedSection, setSelectedSection] = useState<string>('A');
   const [viewMode, setViewMode] = useState<'grid' | 'cards'>('grid');
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   // Bulk Multi-Subject Modal State
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
-  const [bulkClassId, setBulkClassId] = useState<string>(classes[7]?.id || classes[0]?.id || 'cls-8');
+  const [bulkClassId, setBulkClassId] = useState<string>(classes[0]?.id || '');
   const [bulkSection, setBulkSection] = useState<string>('A');
   const [bulkDay, setBulkDay] = useState<DayOfWeek>('Sunday');
   const [bulkDefaultTimeStart, setBulkDefaultTimeStart] = useState<string>('09:00 AM');
   const [bulkDefaultTimeEnd, setBulkDefaultTimeEnd] = useState<string>('09:45 AM');
-  const [bulkDefaultRoom, setBulkDefaultRoom] = useState<string>('Room 301');
+  const [bulkDefaultRoom, setBulkDefaultRoom] = useState<string>('Room 101');
   const [bulkRows, setBulkRows] = useState<{
     id: string;
     periodNumber: number;
@@ -73,19 +66,19 @@ export const ClassRoutineList: React.FC = () => {
 
   // Single Subject Modal State
   const [isSingleModalOpen, setIsSingleModalOpen] = useState(false);
-  const [singleClassId, setSingleClassId] = useState<string>(classes[7]?.id || classes[0]?.id || 'cls-8');
+  const [singleClassId, setSingleClassId] = useState<string>(classes[0]?.id || '');
   const [singleSection, setSingleSection] = useState<string>('A');
   const [singleSubjectId, setSingleSubjectId] = useState<string>('');
-  const [singleSubjectName, setSingleSubjectName] = useState<string>('Bangla 1st Paper');
-  const [singleSubjectCode, setSingleSubjectCode] = useState<string>('101');
+  const [singleSubjectName, setSingleSubjectName] = useState<string>('');
+  const [singleSubjectCode, setSingleSubjectCode] = useState<string>('');
   const [singleTeacherId, setSingleTeacherId] = useState<string>(staff[0]?.id || '');
-  const [singleTeacherName, setSingleTeacherName] = useState<string>(staff[0]?.fullName || 'Assigned Teacher');
+  const [singleTeacherName, setSingleTeacherName] = useState<string>(staff[0]?.fullName || '');
   const [singleDay, setSingleDay] = useState<DayOfWeek>('Sunday');
   const [singlePeriodName, setSinglePeriodName] = useState<string>('Period 1');
-  const [singlePeriodNum, setSinglePeriodNum] = useState<number>(1);
+  const singlePeriodNum = 1;
   const [singleStartTime, setSingleStartTime] = useState<string>('08:30 AM');
   const [singleEndTime, setSingleEndTime] = useState<string>('09:15 AM');
-  const [singleRoom, setSingleRoom] = useState<string>('Room 301');
+  const [singleRoom, setSingleRoom] = useState<string>('Room 101');
 
   // Edit slot modal
   const [editingSlot, setEditingSlot] = useState<ClassRoutineItem | null>(null);
@@ -149,16 +142,20 @@ export const ClassRoutineList: React.FC = () => {
 
   // Open Bulk Multi-Subject Modal
   const openBulkClassRoutineModal = (targetClassId?: string) => {
-    const classIdToUse = targetClassId || selectedClassId || classes[0]?.id || 'cls-8';
+    if (classes.length === 0) {
+      showToast('info', 'Please create an academic class first before scheduling routines.');
+      return;
+    }
+    const classIdToUse = targetClassId || selectedClassId || classes[0]?.id || '';
     setBulkClassId(classIdToUse);
     const cls = classes.find((c) => c.id === classIdToUse) || classes[0];
-    const roomToUse = cls?.roomNumber || 'Room 301';
+    const roomToUse = cls?.roomNumber || 'Room 101';
     setBulkDefaultRoom(roomToUse);
     setBulkSection(cls?.sections?.[0] || 'A');
 
     const subs = getSubjectsForBulk(classIdToUse);
     const initialRows = subs.map((sub, idx) => {
-      const teacher = staff[idx % staff.length];
+      const teacher = staff.length > 0 ? staff[idx % staff.length] : undefined;
       return {
         id: `bulk-row-${Date.now()}-${idx}`,
         periodNumber: idx + 1,
@@ -169,7 +166,7 @@ export const ClassRoutineList: React.FC = () => {
         subjectName: sub.name,
         subjectCode: sub.code,
         teacherId: teacher?.id || '',
-        teacherName: teacher?.fullName || 'Assigned Teacher',
+        teacherName: teacher?.fullName || 'TBA',
         roomNumber: roomToUse,
         dayOfWeek: bulkDay,
       };
@@ -189,7 +186,7 @@ export const ClassRoutineList: React.FC = () => {
     }
     const subs = getSubjectsForBulk(newClassId);
     const newRows = subs.map((sub, idx) => {
-      const teacher = staff[idx % staff.length];
+      const teacher = staff.length > 0 ? staff[idx % staff.length] : undefined;
       return {
         id: `bulk-row-${Date.now()}-${idx}`,
         periodNumber: idx + 1,
@@ -200,7 +197,7 @@ export const ClassRoutineList: React.FC = () => {
         subjectName: sub.name,
         subjectCode: sub.code,
         teacherId: teacher?.id || '',
-        teacherName: teacher?.fullName || 'Assigned Teacher',
+        teacherName: teacher?.fullName || 'TBA',
         roomNumber: roomToUse,
         dayOfWeek: bulkDay,
       };
@@ -264,8 +261,8 @@ export const ClassRoutineList: React.FC = () => {
   const handleAddExtraBulkRow = () => {
     const curSubs = getSubjectsForBulk(bulkClassId);
     const nextNum = bulkRows.length + 1;
-    const sub = curSubs[nextNum % curSubs.length] || curSubs[0];
-    const teacher = staff[nextNum % staff.length] || staff[0];
+    const sub = curSubs.length > 0 ? curSubs[nextNum % curSubs.length] : undefined;
+    const teacher = staff.length > 0 ? staff[nextNum % staff.length] : undefined;
     const newRow = {
       id: `bulk-row-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       periodNumber: nextNum,
@@ -273,11 +270,11 @@ export const ClassRoutineList: React.FC = () => {
       startTime: bulkDefaultTimeStart,
       endTime: bulkDefaultTimeEnd,
       subjectId: sub?.id || '',
-      subjectName: sub?.name || 'Extra Subject',
-      subjectCode: sub?.code || '101',
+      subjectName: sub?.name || 'Subject',
+      subjectCode: sub?.code || '',
       teacherId: teacher?.id || '',
-      teacherName: teacher?.fullName || 'Assigned Teacher',
-      roomNumber: bulkDefaultRoom || 'Room 301',
+      teacherName: teacher?.fullName || 'TBA',
+      roomNumber: bulkDefaultRoom || 'Room 101',
       dayOfWeek: bulkDay,
     };
     setBulkRows([...bulkRows, newRow]);
@@ -320,11 +317,15 @@ export const ClassRoutineList: React.FC = () => {
 
   // Open Single Subject Modal
   const openSingleSubjectModal = (targetClassId?: string) => {
-    const classIdToUse = targetClassId || selectedClassId || classes[0]?.id || 'cls-8';
+    if (classes.length === 0) {
+      showToast('info', 'Please create an academic class first before adding routine slots.');
+      return;
+    }
+    const classIdToUse = targetClassId || selectedClassId || classes[0]?.id || '';
     setSingleClassId(classIdToUse);
     const cls = classes.find((c) => c.id === classIdToUse) || classes[0];
     setSingleSection(cls?.sections?.[0] || 'A');
-    setSingleRoom(cls?.roomNumber || 'Room 301');
+    setSingleRoom(cls?.roomNumber || 'Room 101');
 
     const subs = getSubjectsForBulk(classIdToUse);
     if (subs.length > 0) {
@@ -335,6 +336,9 @@ export const ClassRoutineList: React.FC = () => {
     if (staff.length > 0) {
       setSingleTeacherId(staff[0].id);
       setSingleTeacherName(staff[0].fullName);
+    } else {
+      setSingleTeacherId('');
+      setSingleTeacherName('');
     }
     setIsSingleModalOpen(true);
   };
@@ -506,6 +510,7 @@ export const ClassRoutineList: React.FC = () => {
               onChange={(e) => setSelectedClassId(e.target.value)}
               className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
             >
+              {classes.length === 0 && <option value="">-- No Classes Created Yet --</option>}
               {classes.map((cls) => (
                 <option key={cls.id} value={cls.id}>
                   {cls.className} ({cls.classCode})
@@ -585,26 +590,42 @@ export const ClassRoutineList: React.FC = () => {
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
           <CalendarDays className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto" />
           <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-            No routine scheduled for {selectedClass?.className} ({selectedSection === 'All' ? 'All Sections' : `Sec ${selectedSection}`})
+            {classes.length === 0
+              ? 'No Academic Classes Created Yet'
+              : `No routine scheduled for ${selectedClass?.className || 'this class'} (${selectedSection === 'All' ? 'All Sections' : `Sec ${selectedSection}`})`}
           </h3>
           <p className="text-slate-500 text-xs max-w-md mx-auto">
-            You haven&apos;t added any period timetable for this class yet. Click below to add single periods or auto-generate the complete week schedule.
+            {classes.length === 0
+              ? 'Create your first academic class and assign subjects before generating class routines.'
+              : "You haven't added any period timetable for this class yet. Click below to add single periods or generate the class schedule."}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            <button
-              onClick={() => openBulkClassRoutineModal()}
-              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all inline-flex items-center gap-2 cursor-pointer"
-            >
-              <CalendarDays className="w-4 h-4" />
-              Create Class Routine (Multi-Subject)
-            </button>
-            <button
-              onClick={() => openSingleSubjectModal()}
-              className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold text-xs transition-all inline-flex items-center gap-2 cursor-pointer"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Add Single Subject
-            </button>
+            {classes.length === 0 ? (
+              <button
+                onClick={() => setCurrentRoute('class-add')}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all inline-flex items-center gap-2 cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" />
+                Create Academic Class
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => openBulkClassRoutineModal()}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all inline-flex items-center gap-2 cursor-pointer"
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  Create Class Routine (Multi-Subject)
+                </button>
+                <button
+                  onClick={() => openSingleSubjectModal()}
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold text-xs transition-all inline-flex items-center gap-2 cursor-pointer"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  Add Single Subject
+                </button>
+              </>
+            )}
           </div>
         </div>
       ) : viewMode === 'grid' ? (
@@ -616,7 +637,7 @@ export const ClassRoutineList: React.FC = () => {
                 {selectedClass?.className} — Weekly Master Timetable (Section: {selectedSection})
               </span>
               <span className="text-xs text-slate-400 font-mono">
-                Room: {selectedClass?.roomNumber || 'Room 301'}
+                Room: {selectedClass?.roomNumber || '—'}
               </span>
             </div>
             <span className="text-xs text-slate-500 font-medium">
@@ -1004,13 +1025,13 @@ export const ClassRoutineList: React.FC = () => {
               {/* Institution Header */}
               <div className="text-center border-b-2 border-slate-900 pb-4 mb-5">
                 <h2 className="text-2xl font-extrabold text-slate-900 uppercase tracking-tight">
-                  {schoolSettings.schoolName || 'ABC High School & College'}
+                  {schoolSettings.institutionName || schoolSettings.schoolName}
                 </h2>
                 <p className="text-xs text-slate-600 mt-0.5">
-                  {schoolSettings.address || 'Dhaka, Bangladesh'} • EIIN: {schoolSettings.eiin || '108422'}
+                  {schoolSettings.address || '—'} {schoolSettings.eiin ? `• EIIN: ${schoolSettings.eiin}` : ''}
                 </p>
                 <div className="inline-block px-4 py-1 mt-2 rounded-full bg-slate-900 text-white text-xs font-bold uppercase tracking-wider">
-                  Weekly Class Routine — Academic Session {selectedClass?.academicYear || '2026'}
+                  Weekly Class Routine — Academic Session {selectedClass?.academicYear || String(new Date().getFullYear())}
                 </div>
               </div>
 
@@ -1018,18 +1039,18 @@ export const ClassRoutineList: React.FC = () => {
               <div className="grid grid-cols-3 gap-4 text-xs font-semibold text-slate-800 bg-slate-50 p-3 rounded-lg border border-slate-200 mb-5">
                 <div>
                   <span className="text-slate-500 font-normal">Class: </span>
-                  <strong className="text-sm font-bold">{selectedClass?.className}</strong>
+                  <strong className="text-sm font-bold">{selectedClass?.className || '—'}</strong>
                   {selectedClass?.group && selectedClass.group !== 'General' && (
                     <span className="ml-1 text-[11px] text-blue-700 font-bold">({selectedClass.group})</span>
                   )}
                 </div>
                 <div className="text-center">
                   <span className="text-slate-500 font-normal">Section: </span>
-                  <strong>{selectedSection === 'All' ? 'All Sections' : `Section ${selectedSection}`}</strong> • Room: {selectedClass?.roomNumber || 'Room 301'}
+                  <strong>{selectedSection === 'All' ? 'All Sections' : `Section ${selectedSection}`}</strong> • Room: {selectedClass?.roomNumber || '—'}
                 </div>
                 <div className="text-right">
                   <span className="text-slate-500 font-normal">Class Teacher: </span>
-                  <strong>{selectedClass?.classTeacher || 'Assigned Teacher'}</strong>
+                  <strong>{selectedClass?.classTeacher || '—'}</strong>
                 </div>
               </div>
 

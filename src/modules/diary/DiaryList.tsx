@@ -5,19 +5,15 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
-import { DataTable, Column } from '../../components/common/DataTable';
 import {
   BookOpen,
   PlusCircle,
   Eye,
   Edit,
   Trash2,
-  Calendar,
-  Clock,
   Printer,
   Filter,
   Save,
-  CheckCircle2,
 } from 'lucide-react';
 import { printElement } from '../../utils/printUtils';
 
@@ -40,83 +36,6 @@ export const DiaryList: React.FC = () => {
     updateDiaryEntry(editingDiary.id, editingDiary);
     setEditingDiary(null);
   };
-
-  const columns: Column<DiaryEntry>[] = [
-    {
-      key: 'date',
-      header: 'Assigned Date',
-      sortable: true,
-      render: (d) => <span className="font-mono text-xs font-semibold text-slate-700">{d.date}</span>,
-    },
-    {
-      key: 'className',
-      header: 'Class & Section',
-      sortable: true,
-      render: (d) => (
-        <div>
-          <span className="font-bold text-[#172554] block">{d.className}</span>
-          <span className="text-xs text-blue-600 font-semibold">Section {d.section}</span>
-        </div>
-      ),
-    },
-    {
-      key: 'subject',
-      header: 'Subject & Topic',
-      sortable: true,
-      render: (d) => (
-        <div>
-          <span className="font-bold text-slate-800">{d.subject}</span>
-          <p className="text-xs text-slate-500 line-clamp-1">{d.lessonTitle}</p>
-        </div>
-      ),
-    },
-    {
-      key: 'teacherName',
-      header: 'Teacher',
-      sortable: true,
-      render: (d) => <span className="text-xs text-slate-600">{d.teacherName}</span>,
-    },
-    {
-      key: 'submissionDate',
-      header: 'Due Date',
-      sortable: true,
-      render: (d) => (
-        <span className="text-xs font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-          Due: {d.submissionDate}
-        </span>
-      ),
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      className: 'text-right',
-      render: (d) => (
-        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={() => setSelectedDiary(d)}
-            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-            title="View Details"
-          >
-            <Eye className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setEditingDiary(d)}
-            className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
-            title="Edit Diary"
-          >
-            <Edit className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setDiaryToDelete(d)}
-            className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-            title="Delete Diary"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      ),
-    },
-  ];
 
   return (
     <div className="space-y-6">

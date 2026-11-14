@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSchool } from '../../context/SchoolContext';
 import { FinancialTransaction } from '../../types';
-import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge, getStatusBadgeVariant } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
@@ -15,13 +14,12 @@ import {
   Receipt,
   CheckCircle2,
   Clock,
-  Printer,
   Save,
   Filter,
 } from 'lucide-react';
 
 export const DayCareFee: React.FC = () => {
-  const { transactions, students, classes, addTransaction, updateTransaction } = useSchool();
+  const { transactions, students, classes, addTransaction, updateTransaction, showToast } = useSchool();
 
   const [selectedReceipt, setSelectedReceipt] = useState<FinancialTransaction | null>(null);
   const [filterStatus, setFilterStatus] = useState<'All' | 'Paid' | 'Pending'>('All');
@@ -29,13 +27,13 @@ export const DayCareFee: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
-    studentId: students[6]?.studentId || students[0]?.studentId || 'STD-2026-007',
-    month: 'October 2026 Extended Daycare',
-    amount: 4500,
+    studentId: students[0]?.studentId || '',
+    month: '',
+    amount: 0,
     paymentMethod: 'bKash' as 'Cash' | 'bKash' | 'Nagad' | 'Bank Transfer' | 'Cheque',
     status: 'Paid' as 'Paid' | 'Pending',
     date: new Date().toISOString().split('T')[0],
-    notes: 'Extended staying 01:00 PM - 05:30 PM with nutritious snacks',
+    notes: '',
   });
 
   const daycareTx = transactions.filter((t) => t.feeType === 'Day Care Fee');
@@ -52,9 +50,24 @@ export const DayCareFee: React.FC = () => {
 
   const fmtBDT = (val: number) => `BDT ${val.toLocaleString('en-BD')}`;
 
+  useEffect(() => {
+    if ((!formData.studentId || !students.some((s) => s.studentId === formData.studentId)) && students[0]?.studentId) {
+      setFormData((prev) => ({ ...prev, studentId: students[0].studentId }));
+    }
+  }, [students, formData.studentId, isAddModalOpen]);
+
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const st = students.find((s) => s.studentId === formData.studentId);
+    if (!st) {
+      showToast('error', 'No Student Selected', 'Please admit and select a student before recording fees.');
+      return;
+    }
+    const amt = Number(formData.amount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      showToast('error', 'Invalid Amount', 'Please enter a fee amount greater than 0.');
+      return;
+    }
     addTransaction({
       feeType: 'Day Care Fee',
       title: formData.month,
@@ -62,9 +75,9 @@ export const DayCareFee: React.FC = () => {
       date: formData.date,
       paymentMethod: formData.paymentMethod,
       status: formData.status,
-      partyName: st?.fullName || 'Daycare Infant',
-      partyId: formData.studentId,
-      classInfo: `${st?.className || 'Pre-School'} (Daycare)`,
+      partyName: st.fullName,
+      partyId: st.studentId,
+      classInfo: `${st.className} (Daycare)`,
       notes: formData.notes,
     });
     setIsAddModalOpen(false);
@@ -239,6 +252,7 @@ export const DayCareFee: React.FC = () => {
               <input
                 type="text"
                 required
+                placeholder="e.g. Monthly Extended Daycare"
                 value={formData.month}
                 onChange={(e) => setFormData({ ...formData, month: e.target.value })}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
@@ -250,8 +264,8 @@ export const DayCareFee: React.FC = () => {
               <input
                 type="number"
                 required
-                min="500"
-                value={formData.amount}
+                min="1"
+                value={formData.amount || ''}
                 onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
               />

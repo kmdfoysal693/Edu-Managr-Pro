@@ -23,10 +23,7 @@ import {
   Percent,
   FileDown,
   Printer,
-  School,
   Upload,
-  CheckCircle,
-  FileText,
   ShieldCheck,
   Building,
   Contact,
@@ -638,16 +635,18 @@ export const ShareholderList: React.FC = () => {
                 </table>
               </div>
 
-              {/* 5. Bank Account & Settlement Note */}
+              {/* 5. Institution Contact & Statutory Declaration */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 text-xs">
                 <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-1">
                   <p className="font-bold text-[#172554] flex items-center gap-1.5">
                     <Building className="w-3.5 h-3.5 text-blue-600" />
-                    School Capital Reserve Bank Account:
+                    Registered Institutional Office:
                   </p>
-                  <p className="text-slate-600">Bank: <strong>Sonali Bank PLC</strong>, Dhanmondi Corporate Branch</p>
-                  <p className="text-slate-600 font-mono">Account No: <strong>0102-334455201</strong> (BDT)</p>
-                  <p className="text-slate-400 text-[11px]">Routing No: 200260193 • SWIFT: SONABBDH</p>
+                  <p className="text-slate-700 font-semibold">{schoolSettings.schoolName}</p>
+                  <p className="text-slate-600">{schoolSettings.address}</p>
+                  <p className="text-slate-500 text-[11px]">
+                    Tel: {schoolSettings.phone} • Email: {schoolSettings.email}
+                  </p>
                 </div>
 
                 <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1">
@@ -664,25 +663,19 @@ export const ShareholderList: React.FC = () => {
               {/* 6. Signatures & Official Seals */}
               <div className="pt-8 border-t border-slate-200 grid grid-cols-3 gap-4 text-center text-xs">
                 <div>
-                  <div className="h-10 border-b border-slate-400 flex items-end justify-center pb-1">
-                    <span className="font-script text-slate-700 italic font-semibold">T. Hossain</span>
-                  </div>
+                  <div className="h-10 border-b border-slate-400" />
                   <p className="font-bold text-[#172554] mt-1.5">Senior Accounts Officer</p>
                   <p className="text-[10px] text-slate-400">Finance & Budget Dept</p>
                 </div>
 
                 <div>
-                  <div className="h-10 border-b border-slate-400 flex items-end justify-center pb-1">
-                    <span className="font-script text-slate-700 italic font-semibold">K. A. Chowdhury</span>
-                  </div>
+                  <div className="h-10 border-b border-slate-400" />
                   <p className="font-bold text-[#172554] mt-1.5">Bursar & Financial Controller</p>
                   <p className="text-[10px] text-slate-400">{schoolSettings.schoolName}</p>
                 </div>
 
                 <div>
-                  <div className="h-10 border-b border-slate-400 flex items-end justify-center pb-1">
-                    <span className="font-script text-blue-900 italic font-bold">Prof. M. Rahman</span>
-                  </div>
+                  <div className="h-10 border-b border-slate-400" />
                   <p className="font-bold text-[#172554] mt-1.5">Principal & Board Secretary</p>
                   <p className="text-[10px] text-slate-400">{schoolSettings.schoolName}</p>
                 </div>

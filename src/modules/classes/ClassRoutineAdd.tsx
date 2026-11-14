@@ -5,21 +5,13 @@ import {
   CalendarPlus,
   CalendarClock,
   CalendarDays,
-  Clock,
   Plus,
   PlusCircle,
   Trash2,
   Sparkles,
-  ArrowRight,
   BookOpen,
-  Users,
-  DoorOpen,
   Layers,
-  GraduationCap,
-  RotateCcw,
-  CheckCircle2,
   Save,
-  Check,
 } from 'lucide-react';
 
 interface RoutineRowItem {
@@ -59,33 +51,34 @@ export const ClassRoutineAdd: React.FC = () => {
     addClassRoutine,
     addClassRoutinesBatch,
     setCurrentRoute,
+    showToast,
   } = useSchool();
 
   // Mode Switcher: Multi-Subject vs Single Subject Routine
   const [creationMode, setCreationMode] = useState<'multi' | 'single'>('multi');
 
   // Multi-Subject Form State
-  const [selectedClassId, setSelectedClassId] = useState<string>(classes[7]?.id || classes[0]?.id || 'cls-8');
+  const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id || '');
   const [selectedSection, setSelectedSection] = useState<string>('A');
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>('Sunday');
   const [defaultTimeStart, setDefaultTimeStart] = useState<string>('09:00 AM');
   const [defaultTimeEnd, setDefaultTimeEnd] = useState<string>('09:45 AM');
-  const [defaultRoom, setDefaultRoom] = useState<string>('Room 301');
+  const [defaultRoom, setDefaultRoom] = useState<string>('Room 101');
 
   // Single Subject Form State
-  const [singleClassId, setSingleClassId] = useState<string>(classes[7]?.id || classes[0]?.id || 'cls-8');
+  const [singleClassId, setSingleClassId] = useState<string>(classes[0]?.id || '');
   const [singleSection, setSingleSection] = useState<string>('A');
   const [singleSubjectId, setSingleSubjectId] = useState<string>('');
-  const [singleSubjectName, setSingleSubjectName] = useState<string>('Bangla 1st Paper');
-  const [singleSubjectCode, setSingleSubjectCode] = useState<string>('101');
+  const [singleSubjectName, setSingleSubjectName] = useState<string>('');
+  const [singleSubjectCode, setSingleSubjectCode] = useState<string>('');
   const [singleTeacherId, setSingleTeacherId] = useState<string>(staff[0]?.id || '');
-  const [singleTeacherName, setSingleTeacherName] = useState<string>(staff[0]?.fullName || 'Assigned Teacher');
+  const [singleTeacherName, setSingleTeacherName] = useState<string>(staff[0]?.fullName || '');
   const [singleDay, setSingleDay] = useState<DayOfWeek>('Sunday');
   const [singlePeriodName, setSinglePeriodName] = useState<string>('Period 1');
-  const [singlePeriodNum, setSinglePeriodNum] = useState<number>(1);
+  const singlePeriodNum = 1;
   const [singleStartTime, setSingleStartTime] = useState<string>('08:30 AM');
   const [singleEndTime, setSingleEndTime] = useState<string>('09:15 AM');
-  const [singleRoom, setSingleRoom] = useState<string>('Room 301');
+  const [singleRoom, setSingleRoom] = useState<string>('Room 101');
 
   // Selected class entity for Multi-Subject mode
   const selectedClass = useMemo(() => {
@@ -162,12 +155,12 @@ export const ClassRoutineAdd: React.FC = () => {
   useEffect(() => {
     if (!selectedClass || classSubjects.length === 0) return;
 
-    const baseRoom = selectedClass.roomNumber || defaultRoom || 'Room 301';
+    const baseRoom = selectedClass.roomNumber || defaultRoom || 'Room 101';
     setDefaultRoom(baseRoom);
 
     const initialRows: RoutineRowItem[] = classSubjects.map((sub, index) => {
       const slot = DEFAULT_TIME_SLOTS[index % DEFAULT_TIME_SLOTS.length];
-      const teacher = staff[index % staff.length];
+      const teacher = staff.length > 0 ? staff[index % staff.length] : undefined;
 
       return {
         id: `row-${index}-${Date.now()}`,
@@ -179,7 +172,7 @@ export const ClassRoutineAdd: React.FC = () => {
         subjectName: sub.name,
         subjectCode: sub.code,
         teacherId: teacher?.id || '',
-        teacherName: teacher?.fullName || 'Assigned Teacher',
+        teacherName: teacher?.fullName || 'TBA',
         roomNumber: baseRoom,
         dayOfWeek: selectedDay,
         isBreak: false,
@@ -246,8 +239,8 @@ export const ClassRoutineAdd: React.FC = () => {
   // Add extra subject row
   const handleAddExtraRow = () => {
     const nextNum = rows.length + 1;
-    const sub = classSubjects[nextNum % classSubjects.length] || classSubjects[0];
-    const teacher = staff[nextNum % staff.length] || staff[0];
+    const sub = classSubjects.length > 0 ? classSubjects[nextNum % classSubjects.length] : undefined;
+    const teacher = staff.length > 0 ? staff[nextNum % staff.length] : undefined;
 
     const newRow: RoutineRowItem = {
       id: `row-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -256,11 +249,11 @@ export const ClassRoutineAdd: React.FC = () => {
       startTime: defaultTimeStart,
       endTime: defaultTimeEnd,
       subjectId: sub?.id || '',
-      subjectName: sub?.name || 'Extra Subject',
-      subjectCode: sub?.code || '101',
+      subjectName: sub?.name || 'Subject',
+      subjectCode: sub?.code || '',
       teacherId: teacher?.id || '',
-      teacherName: teacher?.fullName || 'Assigned Teacher',
-      roomNumber: defaultRoom || 'Room 301',
+      teacherName: teacher?.fullName || 'TBA',
+      roomNumber: defaultRoom || 'Room 101',
       dayOfWeek: selectedDay,
       isBreak: false,
     };
@@ -277,7 +270,10 @@ export const ClassRoutineAdd: React.FC = () => {
   // Submit Multi-Subject Routine Batch
   const handleSubmitMultiSubject = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedClass || rows.length === 0) return;
+    if (!selectedClass || rows.length === 0) {
+      showToast('error', 'Please create a class and add at least one subject slot.');
+      return;
+    }
 
     const itemsToAdd: Omit<ClassRoutineItem, 'id'>[] = rows.map((r, idx) => ({
       classId: selectedClass.id,
@@ -304,7 +300,14 @@ export const ClassRoutineAdd: React.FC = () => {
   // Submit Single Subject Routine
   const handleSubmitSingleSubject = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!singleClass) return;
+    if (!singleClass) {
+      showToast('error', 'Please create an academic class first.');
+      return;
+    }
+    if (!singleSubjectName.trim()) {
+      showToast('error', 'Please select or enter a subject.');
+      return;
+    }
 
     addClassRoutine({
       classId: singleClass.id,
@@ -319,7 +322,7 @@ export const ClassRoutineAdd: React.FC = () => {
       subjectName: singleSubjectName,
       subjectCode: singleSubjectCode || undefined,
       teacherId: singleTeacherId || undefined,
-      teacherName: singleTeacherName,
+      teacherName: singleTeacherName || 'TBA',
       roomNumber: singleRoom,
       isBreak: false,
     });
@@ -329,7 +332,10 @@ export const ClassRoutineAdd: React.FC = () => {
 
   // Full week auto-schedule
   const handleAutoGenerateFullWeek = () => {
-    if (!selectedClass || classSubjects.length === 0) return;
+    if (!selectedClass || classSubjects.length === 0) {
+      showToast('error', 'Please create a class with subjects first.');
+      return;
+    }
 
     const weekDays: DayOfWeek[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
     const allWeekItems: Omit<ClassRoutineItem, 'id'>[] = [];
@@ -338,7 +344,7 @@ export const ClassRoutineAdd: React.FC = () => {
       DEFAULT_TIME_SLOTS.forEach((slot, slotIdx) => {
         const subOffset = (dayIdx * 2 + slotIdx) % classSubjects.length;
         const sub = classSubjects[subOffset];
-        const teacher = staff[(dayIdx + slotIdx) % staff.length];
+        const teacher = staff.length > 0 ? staff[(dayIdx + slotIdx) % staff.length] : undefined;
 
         allWeekItems.push({
           classId: selectedClass.id,
@@ -351,10 +357,10 @@ export const ClassRoutineAdd: React.FC = () => {
           endTime: slot.end,
           subjectId: sub?.id,
           subjectName: sub?.name || 'Subject',
-          subjectCode: sub?.code || '101',
+          subjectCode: sub?.code || '',
           teacherId: teacher?.id,
-          teacherName: teacher?.fullName || 'Assigned Teacher',
-          roomNumber: selectedClass.roomNumber || defaultRoom || 'Room 301',
+          teacherName: teacher?.fullName || 'TBA',
+          roomNumber: selectedClass.roomNumber || defaultRoom || 'Room 101',
           isBreak: false,
         });
       });
@@ -459,6 +465,7 @@ export const ClassRoutineAdd: React.FC = () => {
                   onChange={(e) => setSelectedClassId(e.target.value)}
                   className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 >
+                  {classes.length === 0 && <option value="">-- Create a Class First --</option>}
                   {classes.map((cls) => (
                     <option key={cls.id} value={cls.id}>
                       {cls.className} ({cls.classCode})
@@ -774,6 +781,7 @@ export const ClassRoutineAdd: React.FC = () => {
                   onChange={(e) => setSingleClassId(e.target.value)}
                   className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 >
+                  {classes.length === 0 && <option value="">-- Create a Class First --</option>}
                   {classes.map((cls) => (
                     <option key={cls.id} value={cls.id}>
                       {cls.className} ({cls.classCode})
@@ -836,10 +844,11 @@ export const ClassRoutineAdd: React.FC = () => {
                   onChange={(e) => {
                     const st = staff.find((t) => t.id === e.target.value);
                     setSingleTeacherId(e.target.value);
-                    if (st) setSingleTeacherName(st.fullName);
+                    setSingleTeacherName(st ? st.fullName : '');
                   }}
                   className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 >
+                  <option value="">-- Assign Teacher Later --</option>
                   {staff.map((st) => (
                     <option key={st.id} value={st.id}>
                       {st.fullName} ({st.designation} - {st.department})

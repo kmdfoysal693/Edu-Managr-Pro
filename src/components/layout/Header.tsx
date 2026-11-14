@@ -16,12 +16,10 @@ import {
   LogOut,
   CheckCircle2,
   AlertTriangle,
-  School,
   X,
   ExternalLink,
   RefreshCw,
   Upload,
-  Image as ImageIcon,
   RotateCcw,
   Building2,
   Globe,
@@ -78,10 +76,6 @@ export const Header: React.FC = () => {
     classes,
     showToast,
     resetToDemoData,
-    language,
-    setLanguage,
-    timezone,
-    setTimezone,
     t,
     notifications,
     unreadNotificationsCount,
@@ -151,16 +145,50 @@ export const Header: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Keep profileForm in sync with userProfile when modal opens
+  useEffect(() => {
+    if (isMyProfileModalOpen) {
+      setProfileForm({
+        name: userProfile.name,
+        email: userProfile.email,
+        phone: userProfile.phone,
+        title: userProfile.title,
+        institution: userProfile.institution,
+      });
+    }
+  }, [isMyProfileModalOpen, userProfile]);
+
+  // Global keyboard shortcut (Ctrl/Cmd + K to toggle search, Escape to close)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      } else if (e.key === 'Escape') {
+        setIsSearchOpen(false);
+        setIsProfileOpen(false);
+        setIsNotificationOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Compute Breadcrumb / Page Title
   let currentParentTitle = 'Dashboard';
   let currentSubTitle = 'Dashboard Overview';
 
-  for (const item of NAVIGATION_ITEMS) {
-    const match = item.subItems.find((s) => s.id === currentRoute);
-    if (match) {
-      currentParentTitle = t('nav.' + item.id, item.label);
-      currentSubTitle = t(match.id, match.label);
-      break;
+  if (currentRoute === 'activity-log') {
+    currentParentTitle = 'System';
+    currentSubTitle = 'Activity & Audit Log';
+  } else {
+    for (const item of NAVIGATION_ITEMS) {
+      const match = item.subItems.find((s) => s.id === currentRoute);
+      if (match) {
+        currentParentTitle = t('nav.' + item.id, item.label);
+        currentSubTitle = t(match.id, match.label);
+        break;
+      }
     }
   }
 
@@ -626,7 +654,7 @@ export const Header: React.FC = () => {
                       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors cursor-pointer text-left"
                     >
                       <RefreshCw className="w-4 h-4" />
-                      <span>Reset Demo Data</span>
+                      <span>Clear All Data</span>
                     </button>
 
                     <div className="my-1 border-t border-slate-100" />
@@ -634,7 +662,7 @@ export const Header: React.FC = () => {
                     <button
                       onClick={() => {
                         setIsProfileOpen(false);
-                        showToast('info', 'Logged Out', 'Administrator session ended. Demo re-authentication ready.');
+                        showToast('info', 'Logged Out', 'Administrator session ended.');
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-rose-50 text-rose-600 transition-colors cursor-pointer text-left"
                     >

@@ -4,6 +4,7 @@ import { FundTransferRecord, FundSourceStream } from '../../types';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { StatCard } from '../../components/common/StatCard';
 import {
   ArrowLeftRight,
@@ -14,8 +15,6 @@ import {
   AlertCircle,
   AlertTriangle,
   FileText,
-  DollarSign,
-  TrendingUp,
   TrendingDown,
   Building2,
   Wallet,
@@ -25,15 +24,11 @@ import {
   Baby,
   PiggyBank,
   Check,
-  Calendar,
   Search,
-  Filter,
   ShieldCheck,
   Send,
   Trash2,
-  HelpCircle,
   Layers,
-  ArrowRight,
 } from 'lucide-react';
 import { printElement } from '../../utils/printUtils';
 
@@ -46,8 +41,8 @@ export const FundTransfer: React.FC = () => {
     userProfile,
     executeFundTransfer,
     deleteFundTransfer,
+    showToast,
     language,
-    t,
   } = useSchool();
 
   // Filter & Search
@@ -58,18 +53,19 @@ export const FundTransfer: React.FC = () => {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState<boolean>(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
   const [selectedVoucher, setSelectedVoucher] = useState<FundTransferRecord | null>(null);
+  const [transferToDelete, setTransferToDelete] = useState<FundTransferRecord | null>(null);
 
   // Form State
-  const [amountInput, setAmountInput] = useState<string>('10000');
+  const [amountInput, setAmountInput] = useState<string>('');
   const [formData, setFormData] = useState({
     sourceStream: 'Monthly Fee' as FundSourceStream,
     destinationFund: 'Main Institutional Treasury',
-    amount: 10000,
+    amount: 0,
     date: new Date().toISOString().split('T')[0],
-    transferredBy: 'Md. Kamrul Hasan (Head Accountant & Bursar)',
-    approvedBy: 'Dr. Mahmudur Rahman (Principal)',
+    transferredBy: userProfile.name ? `${userProfile.name}${userProfile.title ? ` (${userProfile.title})` : ''}` : '',
+    approvedBy: '',
     paymentMethod: 'Internal Ledger' as 'Bank Transfer' | 'Cash' | 'bKash' | 'Cheque' | 'Internal Ledger',
-    referenceNote: 'Regular clearance of fee collection vault to central treasury',
+    referenceNote: '',
   });
 
   const fmtBDT = (val: number) => `BDT ${val.toLocaleString('en-BD')}`;
@@ -160,7 +156,6 @@ export const FundTransfer: React.FC = () => {
   });
 
   // Overall Totals
-  const totalCollectedAcrossAllVaults = vaultStats.reduce((sum, v) => sum + v.totalCollected, 0);
   const totalTransferredToMainTreasury = fundTransfers
     .filter((t) => t.status === 'Completed')
     .reduce((sum, t) => sum + t.amount, 0);
@@ -184,18 +179,18 @@ export const FundTransfer: React.FC = () => {
   const handleOpenTransferForStream = (streamId: FundSourceStream) => {
     const targetVault = vaultStats.find((v) => v.id === streamId);
     const maxAvailable = targetVault ? targetVault.availableToTransfer : 0;
-    const initialAmount = maxAvailable > 0 ? maxAvailable : 5000;
+    const initialAmount = maxAvailable > 0 ? maxAvailable : 0;
 
-    setAmountInput(initialAmount.toString());
+    setAmountInput(initialAmount > 0 ? initialAmount.toString() : '');
     setFormData({
       sourceStream: streamId,
       destinationFund: 'Main Institutional Treasury',
       amount: initialAmount,
       date: new Date().toISOString().split('T')[0],
-      transferredBy: `${userProfile.name} (${userProfile.title || 'Accounts Officer'})`,
-      approvedBy: 'Dr. Mahmudur Rahman (Principal)',
+      transferredBy: userProfile.name ? `${userProfile.name}${userProfile.title ? ` (${userProfile.title})` : ''}` : '',
+      approvedBy: '',
       paymentMethod: 'Internal Ledger',
-      referenceNote: `Transfer of ${targetVault?.label || streamId} collections into main institutional operating treasury`,
+      referenceNote: '',
     });
     setIsTransferModalOpen(true);
   };
@@ -209,11 +204,12 @@ export const FundTransfer: React.FC = () => {
     const amountVal = cleanDigits === '' ? 0 : Number(cleanDigits);
 
     if (amountVal <= 0) {
+      showToast('error', 'Invalid Amount', 'Please enter a transfer amount greater than 0.');
       return;
     }
 
     if (amountVal > available) {
-      // Strictly prevent transfer exceeding balance as requested
+      showToast('error', 'Insufficient Balance', `Entered amount exceeds available vault balance (${fmtBDT(available)}).`);
       return;
     }
 
@@ -302,7 +298,7 @@ export const FundTransfer: React.FC = () => {
             className="flex items-center gap-1.5 font-bold bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             <PlusCircle className="w-4 h-4" />
-            '+ New Fund Transfer'
+            New Fund Transfer
           </Button>
         </div>
       </div>
@@ -596,11 +592,7 @@ export const FundTransfer: React.FC = () => {
                           <FileText className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Void and remove fund transfer ${trf.transferNumber}?`)) {
-                              deleteFundTransfer(trf.id);
-                            }
-                          }}
+                          onClick={() => setTransferToDelete(trf)}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                           title="Void Transfer Record"
                         >
@@ -1232,6 +1224,21 @@ export const FundTransfer: React.FC = () => {
           );
         })()}
       </Modal>
+
+      {/* Void Transfer Confirmation Dialog */}
+      {transferToDelete && (
+        <ConfirmDialog
+          isOpen={Boolean(transferToDelete)}
+          onClose={() => setTransferToDelete(null)}
+          onConfirm={() => {
+            deleteFundTransfer(transferToDelete.id);
+            setTransferToDelete(null);
+          }}
+          title="Void Fund Transfer"
+          message={`Are you sure you want to void and remove fund transfer ${transferToDelete.transferNumber} (${fmtBDT(transferToDelete.amount)})?`}
+          confirmLabel="Void Transfer"
+        />
+      )}
     </div>
   );
 };

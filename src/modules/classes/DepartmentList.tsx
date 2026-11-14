@@ -12,25 +12,20 @@ import {
   BookOpen,
   Users,
   Search,
-  Filter,
   Edit,
   Trash2,
   UserCheck,
   CheckCircle2,
   Briefcase,
-  GraduationCap,
-  Sparkles,
   LayoutGrid,
   List,
-  Mail,
   UserPlus,
   ArrowRight,
   ShieldCheck,
-  Clock,
 } from 'lucide-react';
 
 export const DepartmentList: React.FC = () => {
-  const { departments, staff, addDepartment, updateDepartment, deleteDepartment, setCurrentRoute, language, t } = useSchool();
+  const { departments, staff, addDepartment, updateDepartment, deleteDepartment, setCurrentRoute, language } = useSchool();
 
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [searchQuery, setSearchQuery] = useState('');

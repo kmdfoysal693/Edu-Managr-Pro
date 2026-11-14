@@ -3,8 +3,6 @@ import { useSchool } from '../../context/SchoolContext';
 import { AttendanceStatus } from '../../types';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Badge, getStatusBadgeVariant } from '../../components/common/Badge';
-import { DataTable, Column } from '../../components/common/DataTable';
 import { StatCard } from '../../components/common/StatCard';
 import {
   UserCheck,
@@ -14,7 +12,6 @@ import {
   XCircle,
   Clock,
   Coffee,
-  Download,
   Filter,
 } from 'lucide-react';
 
@@ -25,20 +22,26 @@ export const StaffAttendance: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
   const [departmentFilter, setDepartmentFilter] = useState<string>('All');
 
-  // Attendance state for current selected date
-  const [attendanceForm, setAttendanceForm] = useState<
-    Record<string, { status: AttendanceStatus; notes: string }>
-  >(() => {
+  const syncMapForDate = (targetDate: string) => {
     const map: Record<string, { status: AttendanceStatus; notes: string }> = {};
     staff.forEach((s) => {
-      const existing = staffAttendance.find((a) => a.staffId === s.staffId && a.date === todayStr);
+      const existing = staffAttendance.find((a) => a.staffId === s.staffId && a.date === targetDate);
       map[s.staffId] = {
         status: existing ? existing.status : 'Present',
         notes: existing?.notes || '',
       };
     });
     return map;
-  });
+  };
+
+  // Attendance state for current selected date
+  const [attendanceForm, setAttendanceForm] = useState<
+    Record<string, { status: AttendanceStatus; notes: string }>
+  >(() => syncMapForDate(todayStr));
+
+  React.useEffect(() => {
+    setAttendanceForm(syncMapForDate(selectedDate));
+  }, [staff, selectedDate, staffAttendance]);
 
   // When selectedDate changes, load existing records if any
   const handleDateChange = (newDate: string) => {
@@ -87,6 +90,10 @@ export const StaffAttendance: React.FC = () => {
   };
 
   const handleMarkAll = (status: AttendanceStatus) => {
+    if (filteredStaff.length === 0) {
+      showToast('warning', 'No Staff Found', 'No staff members match the selected department filter.');
+      return;
+    }
     const updated = { ...attendanceForm };
     filteredStaff.forEach((s) => {
       updated[s.staffId] = {
@@ -95,7 +102,7 @@ export const StaffAttendance: React.FC = () => {
       };
     });
     setAttendanceForm(updated);
-    showToast('info', 'Batch Updated', `Marked all visible staff as ${status}.`);
+    showToast('info', 'Batch Updated', `Marked all ${filteredStaff.length} visible staff as ${status}.`);
   };
 
   const handleSaveAttendance = () => {
@@ -104,11 +111,14 @@ export const StaffAttendance: React.FC = () => {
       status: val.status,
       notes: val.notes,
     }));
+    if (records.length === 0) {
+      showToast('warning', 'No Staff Registered', 'Please add staff members before saving attendance.');
+      return;
+    }
     markStaffAttendance(records, selectedDate);
   };
 
   // Compute daily metrics
-  const totalInForm = Object.values(attendanceForm).length;
   const presentCount = Object.values(attendanceForm).filter((v) => v.status === 'Present').length;
   const lateCount = Object.values(attendanceForm).filter((v) => v.status === 'Late').length;
   const leaveCount = Object.values(attendanceForm).filter((v) => v.status === 'Leave').length;
@@ -197,7 +207,14 @@ export const StaffAttendance: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredStaff.map((st) => {
+              {filteredStaff.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-12 text-center text-xs text-slate-400">
+                    No staff members registered yet. Add faculty or administrative staff to record attendance.
+                  </td>
+                </tr>
+              ) : (
+                filteredStaff.map((st) => {
                 const current = attendanceForm[st.staffId] || { status: 'Present', notes: '' };
 
                 return (
@@ -257,7 +274,8 @@ export const StaffAttendance: React.FC = () => {
                     </td>
                   </tr>
                 );
-              })}
+                })
+              )}
             </tbody>
           </table>
         </div>

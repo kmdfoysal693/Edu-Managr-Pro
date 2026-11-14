@@ -2,20 +2,20 @@ import React, { useState, useRef } from 'react';
 import { useSchool } from '../../context/SchoolContext';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { UsersRound, Save, ArrowLeft, Upload, Image as ImageIcon, CheckCircle, RefreshCw } from 'lucide-react';
+import { UsersRound, Save, ArrowLeft, Upload, CheckCircle } from 'lucide-react';
 
 export const ShareholderAdd: React.FC = () => {
-  const { addShareholder, setCurrentRoute } = useSchool();
+  const { addShareholder, setCurrentRoute, schoolSettings } = useSchool();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [formData, setFormData] = useState({
     fullName: '',
-    photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
+    photo: '',
     phoneNumber: '',
     email: '',
     address: '',
-    shareAmount: 1000000,
-    numberOfShares: 100,
+    shareAmount: 0,
+    numberOfShares: 1,
     joiningDate: new Date().toISOString().split('T')[0],
     status: 'Active' as 'Active' | 'Inactive',
     notes: '',
@@ -42,7 +42,7 @@ export const ShareholderAdd: React.FC = () => {
     e.preventDefault();
     addShareholder({
       fullName: formData.fullName,
-      photo: formData.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+      photo: formData.photo || schoolSettings.logo,
       phoneNumber: formData.phoneNumber,
       email: formData.email,
       address: formData.address,
@@ -124,7 +124,7 @@ export const ShareholderAdd: React.FC = () => {
                 <div className="flex items-center gap-3 p-2 bg-slate-50 border border-slate-200 rounded-lg">
                   <div className="relative group shrink-0">
                     <img
-                      src={formData.photo}
+                      src={formData.photo || schoolSettings.logo}
                       alt="Preview"
                       className="w-12 h-12 rounded-lg object-cover ring-2 ring-blue-500/30"
                     />
@@ -160,7 +160,7 @@ export const ShareholderAdd: React.FC = () => {
                     className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                   <img
-                    src={formData.photo}
+                    src={formData.photo || schoolSettings.logo}
                     alt="Preview"
                     className="w-10 h-10 rounded-lg object-cover ring-1 ring-slate-200 shrink-0"
                   />
@@ -209,8 +209,8 @@ export const ShareholderAdd: React.FC = () => {
               <input
                 type="number"
                 required
-                min="10000"
-                step="5000"
+                min="0"
+                step="1000"
                 value={formData.shareAmount}
                 onChange={(e) => setFormData({ ...formData, shareAmount: Number(e.target.value) })}
                 className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"

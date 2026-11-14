@@ -64,9 +64,12 @@ export const ExamRoutine: React.FC = () => {
     deleteExamRoutinesBatch,
     schoolSettings,
     language,
+    showToast,
   } = useSchool();
 
-  const [selectedExamId, setSelectedExamId] = useState<string>(exams[0]?.id || 'ex-001');
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const [selectedExamId, setSelectedExamId] = useState<string>('All');
   const [selectedClassId, setSelectedClassId] = useState<string>('All');
   const [activeViewTab, setActiveViewTab] = useState<'files' | 'slots'>('files');
 
@@ -81,28 +84,28 @@ export const ExamRoutine: React.FC = () => {
 
   // Bulk Multi-Subject Routine Modal State
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
-  const [bulkExamId, setBulkExamId] = useState<string>(exams[0]?.id || 'ex-001');
-  const [bulkClassId, setBulkClassId] = useState<string>(classes[9]?.id || classes[0]?.id || 'cls-10');
-  const [bulkStartDate, setBulkStartDate] = useState<string>('2026-11-15');
+  const [bulkExamId, setBulkExamId] = useState<string>(exams[0]?.id || '');
+  const [bulkClassId, setBulkClassId] = useState<string>(classes[0]?.id || '');
+  const [bulkStartDate, setBulkStartDate] = useState<string>(todayStr);
   const [bulkGapDays, setBulkGapDays] = useState<number>(2);
   const [bulkSkipFridays, setBulkSkipFridays] = useState<boolean>(true);
   const [bulkDefaultTimeStart, setBulkDefaultTimeStart] = useState<string>('09:00 AM');
   const [bulkDefaultTimeEnd, setBulkDefaultTimeEnd] = useState<string>('12:00 PM');
-  const [bulkDefaultRoom, setBulkDefaultRoom] = useState<string>('Room 401 & 402');
+  const [bulkDefaultRoom, setBulkDefaultRoom] = useState<string>('Hall 1');
   const [bulkDefaultSection, setBulkDefaultSection] = useState<string>('All Sections');
   const [bulkRows, setBulkRows] = useState<BulkRoutineRow[]>([]);
   const [editingFileGroupId, setEditingFileGroupId] = useState<string | null>(null);
 
   // Single Subject Form Data (Invigilator removed per user requirement)
   const [formData, setFormData] = useState({
-    examId: selectedExamId,
-    classId: classes[9]?.id || 'cls-10',
+    examId: exams[0]?.id || '',
+    classId: classes[0]?.id || '',
     section: 'All Sections',
-    subject: 'Bangla 1st Paper',
-    examDate: '2026-11-15',
+    subject: '',
+    examDate: todayStr,
     startTime: '09:00 AM',
     endTime: '12:00 PM',
-    roomNumber: 'Room 401 & 402',
+    roomNumber: 'Hall 1',
   });
 
   const selectedExam = exams.find((e) => e.id === selectedExamId);
@@ -226,16 +229,22 @@ export const ExamRoutine: React.FC = () => {
       );
     } else {
       // Creating a fresh new routine file
+      if (exams.length === 0 || classes.length === 0) {
+        showToast('info', 'Please create an examination term and an academic class first.');
+        return;
+      }
       setEditingFileGroupId(null);
-      const classIdToUse = targetClassId || bulkClassId || classes[0]?.id || 'cls-10';
+      const classIdToUse = targetClassId || bulkClassId || classes[0]?.id || '';
       setBulkClassId(classIdToUse);
+      const examIdToUse = bulkExamId || exams[0]?.id || '';
+      setBulkExamId(examIdToUse);
 
-      const ex = exams.find((e) => e.id === bulkExamId) || exams[0];
-      const startDate = ex?.startDate || '2026-11-15';
+      const ex = exams.find((e) => e.id === examIdToUse) || exams[0];
+      const startDate = ex?.startDate || todayStr;
       setBulkStartDate(startDate);
 
       const cls = classes.find((c) => c.id === classIdToUse);
-      const roomToUse = cls?.roomNumber ? `Room ${cls.roomNumber}` : 'Room 401 & 402';
+      const roomToUse = cls?.roomNumber ? `Room ${cls.roomNumber}` : 'Hall 1';
       setBulkDefaultRoom(roomToUse);
 
       // Auto-populate all subjects for that class
@@ -394,6 +403,10 @@ export const ExamRoutine: React.FC = () => {
 
     const currentEx = exams.find((e) => e.id === bulkExamId) || exams[0];
     const currentCls = classes.find((c) => c.id === bulkClassId) || classes[0];
+    if (!currentEx || !currentCls) {
+      showToast('error', 'Please create and select both an examination and a class.');
+      return;
+    }
 
     // If editing an existing file group, remove old slots first to prevent duplicates
     if (editingFileGroupId) {
@@ -404,12 +417,12 @@ export const ExamRoutine: React.FC = () => {
     }
 
     const routinePayload: Omit<ExamRoutineItem, 'id'>[] = bulkRows.map((r) => ({
-      examId: bulkExamId,
-      examName: currentEx?.name || 'Examination',
-      classId: bulkClassId,
-      className: currentCls?.className || 'Class',
+      examId: currentEx.id,
+      examName: currentEx.name,
+      classId: currentCls.id,
+      className: currentCls.className,
       section: r.section || 'All Sections',
-      subject: r.subject.trim() || 'General Subject',
+      subject: r.subject.trim() || 'Subject',
       examDate: r.examDate,
       startTime: r.startTime,
       endTime: r.endTime,
@@ -422,8 +435,8 @@ export const ExamRoutine: React.FC = () => {
     setEditingFileGroupId(null);
 
     // Auto-select this exam and class in the view
-    setSelectedExamId(bulkExamId);
-    setSelectedClassId(bulkClassId);
+    setSelectedExamId(currentEx.id);
+    setSelectedClassId(currentCls.id);
   };
 
   // Delete entire routine file
@@ -436,13 +449,17 @@ export const ExamRoutine: React.FC = () => {
   // Single Subject Save (Invigilator removed)
   const handleAddSingleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const cls = classes.find((c) => c.id === formData.classId);
-    const ex = exams.find((e) => e.id === formData.examId);
+    const cls = classes.find((c) => c.id === formData.classId) || classes[0];
+    const ex = exams.find((e) => e.id === formData.examId) || exams[0];
+    if (!cls || !ex) {
+      showToast('error', 'Please create an examination and a class first.');
+      return;
+    }
     addExamRoutine({
-      examId: formData.examId,
-      examName: ex?.name || 'Examination',
-      classId: formData.classId,
-      className: cls?.className || 'Class',
+      examId: ex.id,
+      examName: ex.name,
+      classId: cls.id,
+      className: cls.className,
       section: formData.section,
       subject: formData.subject,
       examDate: formData.examDate,
@@ -677,7 +694,7 @@ export const ExamRoutine: React.FC = () => {
             }`}
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>'Routine Files (File View)'</span>
+            <span>Routine Files (File View)</span>
             <span className="px-1.5 py-0.2 bg-blue-100 text-blue-800 rounded-full text-[10px]">
               {filteredRoutineFiles.length}
             </span>
@@ -692,7 +709,7 @@ export const ExamRoutine: React.FC = () => {
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            <span>'All Subject Slots (Detailed)'</span>
+            <span>All Subject Slots (Detailed)</span>
             <span className="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px]">
               {filteredRoutines.length}
             </span>
@@ -710,7 +727,7 @@ export const ExamRoutine: React.FC = () => {
             <div className="bg-white p-12 rounded-2xl border border-dashed border-slate-300 text-center text-slate-500">
               <CalendarDays className="w-12 h-12 mx-auto text-blue-500/60 mb-3" />
               <h3 className="text-base font-bold text-slate-800">
-                'No Routine Files Found'
+                No Routine Files Found
               </h3>
               <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
                 Click "Create Exam Routine (Multi-Subject)" above to auto-generate a complete multi-subject routine file for any class.
@@ -768,7 +785,7 @@ export const ExamRoutine: React.FC = () => {
                   {/* Subject Pills Preview */}
                   <div className="p-4 sm:p-5 space-y-3 flex-1">
                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      'Scheduled Subjects:'
+                      Scheduled Subjects:
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {file.items.map((sub) => (
@@ -957,7 +974,7 @@ export const ExamRoutine: React.FC = () => {
               {/* General Examination Rules & Instructions */}
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs mb-6">
                 <p className="font-bold text-[#172554] mb-1">
-                  'Instructions for Candidates:'
+                  Instructions for Candidates:
                 </p>
                 <ol className="list-decimal list-inside text-slate-600 space-y-0.5 text-[11px]">
                   <li>Students must enter the examination hall at least 30 minutes before exam commencement.</li>
@@ -978,8 +995,7 @@ export const ExamRoutine: React.FC = () => {
                   <p className="font-semibold text-slate-600">Class Teacher</p>
                 </div>
                 <div className="text-center">
-                  <div className="font-script text-base text-blue-900 italic font-bold">M. Rahman</div>
-                  <div className="w-36 border-b border-slate-800 mb-1" />
+                  <div className="w-36 border-b border-slate-800 mb-1 mt-6" />
                   <p className="font-bold text-[#172554]">Head of Institution</p>
                 </div>
               </div>
@@ -988,7 +1004,7 @@ export const ExamRoutine: React.FC = () => {
             {/* Modal Actions */}
             <div className="pt-2 flex justify-end gap-2.5">
               <Button variant="outline" size="sm" onClick={() => setSelectedRoutineFileForPrint(null)}>
-                'Close'
+                Close
               </Button>
               <Button
                 variant="primary"
@@ -1040,6 +1056,7 @@ export const ExamRoutine: React.FC = () => {
                   onChange={(e) => setBulkExamId(e.target.value)}
                   className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg font-medium text-slate-800"
                 >
+                  {exams.length === 0 && <option value="">-- Create Exam First --</option>}
                   {exams.map((ex) => (
                     <option key={ex.id} value={ex.id}>
                       {ex.name}
@@ -1059,6 +1076,7 @@ export const ExamRoutine: React.FC = () => {
                   onChange={(e) => handleBulkClassChange(e.target.value)}
                   className="w-full px-3 py-2 text-xs bg-white border-2 border-blue-500 rounded-lg font-bold text-blue-900 shadow-xs"
                 >
+                  {classes.length === 0 && <option value="">-- Create Class First --</option>}
                   {classes.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.className} ({c.sections.join(', ')})
@@ -1152,7 +1170,7 @@ export const ExamRoutine: React.FC = () => {
                 title="Apply start date, gaps, time and room to all subjects below"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                'Apply Settings to All Rows'
+                Apply Settings to All Rows
               </button>
             </div>
           </div>
@@ -1171,7 +1189,7 @@ export const ExamRoutine: React.FC = () => {
               </div>
 
               <Button variant="outline" size="sm" type="button" icon={Plus} onClick={handleAddExtraRow}>
-                'Add Subject'
+                Add Subject
               </Button>
             </div>
 
@@ -1179,10 +1197,10 @@ export const ExamRoutine: React.FC = () => {
               <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300 text-slate-500">
                 <AlertCircle className="w-8 h-8 mx-auto text-amber-500 mb-2" />
                 <p className="text-sm font-semibold">
-                  'No subjects in the routine list.'
+                  No subjects in the routine list.
                 </p>
                 <p className="text-xs text-slate-400 mt-1">
-                  Switch class or click "+ Add Subject" to create exam slots.
+                  Switch class or click &quot;+ Add Subject&quot; to create exam slots.
                 </p>
                 <Button
                   variant="primary"
@@ -1192,7 +1210,7 @@ export const ExamRoutine: React.FC = () => {
                   onClick={() => handleBulkClassChange(bulkClassId)}
                   className="mt-3"
                 >
-                  'Reload Class Subjects'
+                  Reload Class Subjects
                 </Button>
               </div>
             ) : (
@@ -1203,19 +1221,19 @@ export const ExamRoutine: React.FC = () => {
                       <tr>
                         <th className="px-3 py-2.5 w-10 text-center">#</th>
                         <th className="px-3 py-2.5 min-w-[200px]">
-                          'Subject Name'
+                          Subject Name
                         </th>
                         <th className="px-3 py-2.5 min-w-[140px]">
-                          'Exam Date'
+                          Exam Date
                         </th>
                         <th className="px-3 py-2.5 min-w-[170px]">
-                          'Time Slot'
+                          Time Slot
                         </th>
                         <th className="px-3 py-2.5 min-w-[140px]">
-                          'Room / Hall'
+                          Room / Hall
                         </th>
                         <th className="px-2 py-2.5 w-12 text-center text-rose-600">
-                          'Del'
+                          Del
                         </th>
                       </tr>
                     </thead>
@@ -1295,7 +1313,7 @@ export const ExamRoutine: React.FC = () => {
           <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="text-xs text-slate-500 font-medium">
               <span className="font-bold text-[#172554]">{bulkRows.length}</span>{' '}
-              'subjects ready in 1 unified routine file'
+              subjects ready in 1 unified routine file
             </div>
 
             <div className="flex items-center gap-2.5">
@@ -1308,7 +1326,7 @@ export const ExamRoutine: React.FC = () => {
                   setEditingFileGroupId(null);
                 }}
               >
-                'Cancel'
+                Cancel
               </Button>
               <Button
                 variant="primary"
@@ -1344,6 +1362,7 @@ export const ExamRoutine: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, examId: e.target.value })}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
               >
+                {exams.length === 0 && <option value="">-- Create Exam First --</option>}
                 {exams.map((ex) => (
                   <option key={ex.id} value={ex.id}>
                     {ex.name}
@@ -1359,6 +1378,7 @@ export const ExamRoutine: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
               >
+                {classes.length === 0 && <option value="">-- Create Class First --</option>}
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.className}

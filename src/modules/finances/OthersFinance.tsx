@@ -1,27 +1,23 @@
 import React, { useState } from 'react';
 import { useSchool } from '../../context/SchoolContext';
-import { FinancialTransaction, FeeType } from '../../types';
-import { Card } from '../../components/common/Card';
+import { FinancialTransaction } from '../../types';
 import { Button } from '../../components/common/Button';
-import { Badge, getStatusBadgeVariant } from '../../components/common/Badge';
+import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { DataTable, Column } from '../../components/common/DataTable';
 import { StatCard } from '../../components/common/StatCard';
 import { ReceiptModal } from './ReceiptModal';
 import {
-  PiggyBank,
   PlusCircle,
   TrendingDown,
   TrendingUp,
   Receipt,
   Scale,
-  DollarSign,
   Save,
-  Filter,
 } from 'lucide-react';
 
 export const OthersFinance: React.FC = () => {
-  const { transactions, addTransaction } = useSchool();
+  const { transactions, addTransaction, showToast } = useSchool();
 
   const [activeTab, setActiveTab] = useState<'all' | 'expense' | 'income'>('all');
   const [selectedReceipt, setSelectedReceipt] = useState<FinancialTransaction | null>(null);
@@ -31,7 +27,7 @@ export const OthersFinance: React.FC = () => {
     feeType: 'School Expense' as 'School Expense' | 'Other Income',
     title: '',
     category: 'Utilities',
-    amount: 15000,
+    amount: 0,
     date: new Date().toISOString().split('T')[0],
     partyName: '',
     paymentMethod: 'Bank Transfer' as 'Cash' | 'bKash' | 'Nagad' | 'Bank Transfer' | 'Cheque',
@@ -75,6 +71,11 @@ export const OthersFinance: React.FC = () => {
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const amt = Number(formData.amount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      showToast('error', 'Invalid Amount', 'Please enter a transaction amount greater than 0.');
+      return;
+    }
     addTransaction({
       feeType: formData.feeType,
       title: formData.title,
@@ -91,7 +92,7 @@ export const OthersFinance: React.FC = () => {
       feeType: 'School Expense',
       title: '',
       category: 'Utilities',
-      amount: 15000,
+      amount: 0,
       date: new Date().toISOString().split('T')[0],
       partyName: '',
       paymentMethod: 'Bank Transfer',
@@ -311,8 +312,8 @@ export const OthersFinance: React.FC = () => {
               <input
                 type="number"
                 required
-                min="100"
-                value={formData.amount}
+                min="1"
+                value={formData.amount || ''}
                 onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
               />

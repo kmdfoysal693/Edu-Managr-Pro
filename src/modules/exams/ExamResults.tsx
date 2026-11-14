@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSchool } from '../../context/SchoolContext';
 import { StudentExamResult, SubjectMark } from '../../types';
 import { Button } from '../../components/common/Button';
@@ -16,7 +16,6 @@ import {
   Save,
   Plus,
   X,
-  TrendingUp,
   Search,
   Filter,
   RotateCcw,
@@ -31,7 +30,7 @@ import {
 import { printElement } from '../../utils/printUtils';
 
 export const ExamResults: React.FC = () => {
-  const { examResults, exams, students, saveExamResult, deleteExamResult, schoolSettings, t } = useSchool();
+  const { examResults, exams, students, saveExamResult, deleteExamResult, schoolSettings, showToast, t } = useSchool();
 
   const [selectedResultForCard, setSelectedResultForCard] = useState<StudentExamResult | null>(null);
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
@@ -45,22 +44,32 @@ export const ExamResults: React.FC = () => {
   const [gradeFilter, setGradeFilter] = useState('ALL');
 
   // Form State for Marks Entry
-  const [selectedExamId, setSelectedExamId] = useState<string>(exams[0]?.id || 'ex-003');
-  const [selectedStudentId, setSelectedStudentId] = useState<string>(students[0]?.studentId || 'STD-2026-001');
+  const [selectedExamId, setSelectedExamId] = useState<string>(exams[0]?.id || '');
+  const [selectedStudentId, setSelectedStudentId] = useState<string>(students[0]?.studentId || '');
 
   const [subjectsList, setSubjectsList] = useState<SubjectMark[]>([
-    { subject: 'Bangla', marksObtained: 85, totalMarks: 100, grade: 'A+', gradePoint: 5.0 },
-    { subject: 'English', marksObtained: 88, totalMarks: 100, grade: 'A+', gradePoint: 5.0 },
-    { subject: 'Mathematics', marksObtained: 94, totalMarks: 100, grade: 'A+', gradePoint: 5.0 },
-    { subject: 'General Science', marksObtained: 90, totalMarks: 100, grade: 'A+', gradePoint: 5.0 },
-    { subject: 'Social Science', marksObtained: 82, totalMarks: 100, grade: 'A+', gradePoint: 5.0 },
+    { subject: '', marksObtained: 0, totalMarks: 100, grade: 'F', gradePoint: 0.0 },
   ]);
 
-  const [remarks, setRemarks] = useState('Satisfactory command and commendable analytical focus.');
+  const [remarks, setRemarks] = useState('');
+
+  useEffect(() => {
+    if ((!selectedExamId || !exams.some((e) => e.id === selectedExamId)) && exams[0]?.id) {
+      setSelectedExamId(exams[0].id);
+    }
+  }, [exams, selectedExamId]);
+
+  useEffect(() => {
+    if ((!selectedStudentId || !students.some((s) => s.studentId === selectedStudentId)) && students[0]?.studentId) {
+      setSelectedStudentId(students[0].studentId);
+    }
+  }, [students, selectedStudentId]);
 
   // Helper grading formula
   const computeGrade = (obtained: number, total: number): { grade: string; gp: number } => {
-    const pct = (obtained / total) * 100;
+    if (!Number.isFinite(total) || total <= 0) return { grade: 'F', gp: 0.0 };
+    const safeObtained = Number.isFinite(obtained) ? Math.max(0, obtained) : 0;
+    const pct = (safeObtained / total) * 100;
     if (pct >= 80) return { grade: 'A+', gp: 5.0 };
     if (pct >= 70) return { grade: 'A', gp: 4.0 };
     if (pct >= 60) return { grade: 'A-', gp: 3.5 };
@@ -83,7 +92,7 @@ export const ExamResults: React.FC = () => {
   const handleAddSubjectRow = () => {
     setSubjectsList((prev) => [
       ...prev,
-      { subject: 'New Subject', marksObtained: 75, totalMarks: 100, grade: 'A', gradePoint: 4.0 },
+      { subject: '', marksObtained: 0, totalMarks: 100, grade: 'F', gradePoint: 0.0 },
     ]);
   };
 
@@ -99,12 +108,30 @@ export const ExamResults: React.FC = () => {
     const st = students.find((s) => s.studentId === selectedStudentId);
     const ex = exams.find((e) => e.id === selectedExamId);
 
+    if (!ex) {
+      showToast('error', 'Please create and select an examination first.');
+      return;
+    }
+    if (!st) {
+      showToast('error', 'Please admit and select a student first.');
+      return;
+    }
+    if (subjectsList.some((s) => !s.subject.trim())) {
+      showToast('error', 'Missing Subject Name', 'Please enter a name for every subject row.');
+      return;
+    }
+    if (subjectsList.some((s) => s.totalMarks <= 0 || s.marksObtained < 0 || s.marksObtained > s.totalMarks)) {
+      showToast('error', 'Invalid Marks Range', 'Marks obtained must be between 0 and each subject total marks.');
+      return;
+    }
+
     const totalObtained = subjectsList.reduce((sum, s) => sum + s.marksObtained, 0);
     const maxTotal = subjectsList.reduce((sum, s) => sum + s.totalMarks, 0);
-    const percentage = Number(((totalObtained / maxTotal) * 100).toFixed(1));
-    const avgGP = Number(
-      (subjectsList.reduce((sum, s) => sum + s.gradePoint, 0) / subjectsList.length).toFixed(2)
-    );
+    const percentage = maxTotal > 0 ? Number(((totalObtained / maxTotal) * 100).toFixed(1)) : 0;
+    const avgGP =
+      subjectsList.length > 0
+        ? Number((subjectsList.reduce((sum, s) => sum + s.gradePoint, 0) / subjectsList.length).toFixed(2))
+        : 0;
 
     const isAnyFailed = subjectsList.some((s) => s.grade === 'F');
     const isPassed = !isAnyFailed && percentage >= 33;
@@ -855,6 +882,7 @@ export const ExamResults: React.FC = () => {
                 onChange={(e) => setSelectedExamId(e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg font-medium"
               >
+                {exams.length === 0 && <option value="">-- Create Examination First --</option>}
                 {exams.map((ex) => (
                   <option key={ex.id} value={ex.id}>
                     {ex.name}
@@ -870,6 +898,7 @@ export const ExamResults: React.FC = () => {
                 onChange={(e) => setSelectedStudentId(e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg font-medium"
               >
+                {students.length === 0 && <option value="">-- Admit Student First --</option>}
                 {students.map((st) => (
                   <option key={st.id} value={st.studentId}>
                     {st.fullName} ({st.className} - Roll {st.rollNumber})
@@ -1079,8 +1108,7 @@ export const ExamResults: React.FC = () => {
                   <p className="font-semibold text-slate-600">Guardian Signature</p>
                 </div>
                 <div className="text-center">
-                  <div className="font-script text-base text-blue-900 italic font-bold">M. Rahman</div>
-                  <div className="w-32 border-b border-slate-800 mb-1" />
+                  <div className="w-32 border-b border-slate-800 mb-1 mt-6" />
                   <p className="font-bold text-[#172554]">Head of Institution</p>
                 </div>
               </div>

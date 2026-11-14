@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   LayoutDashboard,
-  Users,
   UserPlus,
   UsersRound,
   CalendarCheck,
@@ -28,7 +27,6 @@ import {
   ListOrdered,
   FileCheck2,
   CalendarDays,
-  ShieldCheck,
   Banknote,
   ArrowLeftRight,
   Building2,

@@ -8,9 +8,11 @@ import { SchoolProvider, useSchool } from './context/SchoolContext';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { ToastContainer } from './components/common/ToastContainer';
+import { NoticePopupModal } from './components/common/NoticePopupModal';
 
 // Modules
 import { DashboardOverview } from './modules/dashboard/DashboardOverview';
+import { ActivityLogView } from './modules/dashboard/ActivityLogView';
 import { ShareholderAdd } from './modules/shareholders/ShareholderAdd';
 import { ShareholderList } from './modules/shareholders/ShareholderList';
 import { StaffAttendance } from './modules/attendance/StaffAttendance';
@@ -52,6 +54,8 @@ const MainLayout: React.FC = () => {
       // Dashboard
       case 'dashboard-overview':
         return <DashboardOverview />;
+      case 'activity-log':
+        return <ActivityLogView />;
 
       // Shareholders
       case 'shareholder-add':
@@ -164,6 +168,9 @@ const MainLayout: React.FC = () => {
 
       {/* Global Interactive Toast Notifications */}
       <ToastContainer />
+
+      {/* Global Auto-Launch Notice Board Popup */}
+      <NoticePopupModal />
     </div>
   );
 };

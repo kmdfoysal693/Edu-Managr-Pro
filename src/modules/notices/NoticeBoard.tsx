@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useSchool } from '../../context/SchoolContext';
-import { Notice, NoticeCategory } from '../../types';
-import { Card } from '../../components/common/Card';
+import { Notice } from '../../types';
 import { Button } from '../../components/common/Button';
 import { Badge, getStatusBadgeVariant } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
@@ -15,8 +14,6 @@ import {
   Trash2,
   Printer,
   Calendar,
-  FileText,
-  School,
   Save,
   Filter,
   Paperclip,
@@ -27,7 +24,7 @@ import {
 import { printElement } from '../../utils/printUtils';
 
 export const NoticeBoard: React.FC = () => {
-  const { notices, updateNotice, deleteNotice, togglePinNotice, setCurrentRoute, schoolSettings } = useSchool();
+  const { notices, updateNotice, deleteNotice, togglePinNotice, setCurrentRoute, schoolSettings, openNoticePopup } = useSchool();
 
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -103,6 +100,16 @@ export const NoticeBoard: React.FC = () => {
             </button>
           </div>
 
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Bell}
+            onClick={openNoticePopup}
+            className="text-blue-700 border-blue-200 bg-blue-50/70 hover:bg-blue-100/70"
+          >
+            Notice Popup
+          </Button>
+
           <Button variant="primary" icon={PlusCircle} onClick={() => setCurrentRoute('notice-new')}>
             Draft Notice
           </Button>
@@ -129,7 +136,18 @@ export const NoticeBoard: React.FC = () => {
         ))}
       </div>
 
-      {viewMode === 'grid' ? (
+      {filteredNotices.length === 0 ? (
+        <div className="bg-white border border-slate-200 rounded-xl p-12 text-center space-y-3 shadow-xs">
+          <Bell className="w-10 h-10 text-slate-300 mx-auto" />
+          <p className="text-sm font-bold text-slate-700">No notices published yet</p>
+          <p className="text-xs text-slate-500">Create a new notice or circular to display announcements here.</p>
+          <div>
+            <Button variant="primary" size="sm" icon={PlusCircle} onClick={() => setCurrentRoute('notice-new')}>
+              Draft Notice
+            </Button>
+          </div>
+        </div>
+      ) : viewMode === 'grid' ? (
         /* Notice Cards Grid: Cross / Checkerboard pattern between White (#FFFFFF) and #99A1AF */
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {filteredNotices.map((n, index) => {
@@ -475,10 +493,12 @@ export const NoticeBoard: React.FC = () => {
               <div className="pt-8 border-t border-slate-200 flex items-end justify-between text-xs">
                 <div>
                   <p className="font-semibold text-slate-400">Notice Reference:</p>
-                  <p className="font-mono text-slate-700">ABC/ACAD/2026-{selectedNotice.id.replace('not-', '')}</p>
+                  <p className="font-mono text-slate-700">
+                    REF/{new Date(selectedNotice.publishDate || Date.now()).getFullYear()}/{selectedNotice.id.replace('not-', '').toUpperCase()}
+                  </p>
                 </div>
                 <div className="text-center">
-                  <div className="font-script text-base text-blue-900 italic font-bold">M. Rahman</div>
+                  <div className="h-6" />
                   <div className="w-32 border-b border-slate-800 mb-1" />
                   <p className="font-bold text-[#172554]">{selectedNotice.author}</p>
                   <p className="text-[10px] text-slate-400">{schoolSettings.schoolName}</p>

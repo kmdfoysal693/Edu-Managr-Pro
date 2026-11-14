@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSchool } from '../../context/SchoolContext';
-import { SchoolClass, AcademicGroup } from '../../types';
+import { SchoolClass } from '../../types';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge, getStatusBadgeVariant } from '../../components/common/Badge';
@@ -13,12 +13,9 @@ import {
   Eye,
   Edit,
   Trash2,
-  Users,
-  DoorOpen,
   LayoutGrid,
   List,
   Save,
-  Plus,
   X,
   BookOpen,
 } from 'lucide-react';
@@ -103,13 +100,14 @@ export const ClassList: React.FC = () => {
       header: 'Enrolled / Cap',
       render: (c) => {
         const count = getStudentCount(c);
+        const pct = c.maxStudents > 0 ? Math.min(100, (count / c.maxStudents) * 100) : 0;
         return (
           <div className="text-xs">
             <span className="font-bold text-slate-800">{count}</span> / <span className="text-slate-400">{c.maxStudents}</span>
             <div className="w-20 bg-slate-100 h-1.5 rounded-full mt-1 overflow-hidden">
               <div
                 className="bg-blue-600 h-full rounded-full"
-                style={{ width: `${Math.min(100, (count / c.maxStudents) * 100)}%` }}
+                style={{ width: `${pct}%` }}
               />
             </div>
           </div>
@@ -193,11 +191,23 @@ export const ClassList: React.FC = () => {
       </div>
 
       {viewMode === 'grid' ? (
+        classes.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
+            <Layers className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <h3 className="text-base font-bold text-[#172554]">No Academic Classes Created Yet</h3>
+            <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+              Create your first class or grade level to assign sections, teachers, textbooks, and enroll students.
+            </p>
+            <Button variant="primary" icon={PlusCircle} className="mt-4" onClick={() => setCurrentRoute('class-add')}>
+              Add New Class
+            </Button>
+          </div>
+        ) : (
         /* Card Grid View */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {classes.map((c) => {
             const count = getStudentCount(c);
-            const occupancyPct = Math.min(100, Math.round((count / c.maxStudents) * 100));
+            const occupancyPct = c.maxStudents > 0 ? Math.min(100, Math.round((count / c.maxStudents) * 100)) : 0;
 
             return (
               <Card
@@ -273,6 +283,7 @@ export const ClassList: React.FC = () => {
             );
           })}
         </div>
+        )
       ) : (
         /* Table View */
         <DataTable

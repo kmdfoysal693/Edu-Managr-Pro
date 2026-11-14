@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSchool } from '../../context/SchoolContext';
 import { FinancialTransaction } from '../../types';
-import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge, getStatusBadgeVariant } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
@@ -12,17 +11,15 @@ import { StudentFeeSelector } from './StudentFeeSelector';
 import {
   Receipt,
   PlusCircle,
-  Eye,
   CheckCircle2,
   Clock,
-  Printer,
   Calendar,
   Save,
   Filter,
 } from 'lucide-react';
 
 export const MonthlyFee: React.FC = () => {
-  const { transactions, students, classes, addTransaction, updateTransaction } = useSchool();
+  const { transactions, students, classes, addTransaction, updateTransaction, showToast } = useSchool();
 
   const [filterStatus, setFilterStatus] = useState<'All' | 'Paid' | 'Pending'>('All');
   const [filterClass, setFilterClass] = useState<string>('All');
@@ -30,13 +27,13 @@ export const MonthlyFee: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
-    studentId: students[0]?.studentId || 'STD-2026-001',
-    monthName: 'October 2026 Tuition Fee',
-    amount: 3500,
+    studentId: students[0]?.studentId || '',
+    monthName: '',
+    amount: 0,
     paymentMethod: 'bKash' as 'Cash' | 'bKash' | 'Nagad' | 'Bank Transfer' | 'Cheque',
     status: 'Paid' as 'Paid' | 'Pending',
     date: new Date().toISOString().split('T')[0],
-    notes: 'Collected via mobile banking',
+    notes: '',
   });
 
   const monthlyFeeTx = transactions.filter((t) => t.feeType === 'Monthly Fee');
@@ -53,9 +50,24 @@ export const MonthlyFee: React.FC = () => {
 
   const fmtBDT = (val: number) => `BDT ${val.toLocaleString('en-BD')}`;
 
+  useEffect(() => {
+    if ((!formData.studentId || !students.some((s) => s.studentId === formData.studentId)) && students[0]?.studentId) {
+      setFormData((prev) => ({ ...prev, studentId: students[0].studentId }));
+    }
+  }, [students, formData.studentId, isAddModalOpen]);
+
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const st = students.find((s) => s.studentId === formData.studentId);
+    if (!st) {
+      showToast('error', 'No Student Selected', 'Please admit and select a student before recording fees.');
+      return;
+    }
+    const amt = Number(formData.amount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      showToast('error', 'Invalid Amount', 'Please enter a fee amount greater than 0.');
+      return;
+    }
     addTransaction({
       feeType: 'Monthly Fee',
       title: formData.monthName,
@@ -63,9 +75,9 @@ export const MonthlyFee: React.FC = () => {
       date: formData.date,
       paymentMethod: formData.paymentMethod,
       status: formData.status,
-      partyName: st?.fullName || 'Student',
-      partyId: formData.studentId,
-      classInfo: `${st?.className || 'Class'} - Sec ${st?.section || 'A'}`,
+      partyName: st.fullName,
+      partyId: st.studentId,
+      classInfo: `${st.className} - Sec ${st.section}`,
       notes: formData.notes,
     });
     setIsAddModalOpen(false);
@@ -243,6 +255,7 @@ export const MonthlyFee: React.FC = () => {
               <input
                 type="text"
                 required
+                placeholder="e.g. Monthly Tuition Fee"
                 value={formData.monthName}
                 onChange={(e) => setFormData({ ...formData, monthName: e.target.value })}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
@@ -254,8 +267,8 @@ export const MonthlyFee: React.FC = () => {
               <input
                 type="number"
                 required
-                min="500"
-                value={formData.amount}
+                min="1"
+                value={formData.amount || ''}
                 onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
               />

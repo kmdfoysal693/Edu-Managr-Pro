@@ -1,36 +1,35 @@
 import React, { useState } from 'react';
 import { useSchool } from '../../context/SchoolContext';
 import { Exam } from '../../types';
-import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge, getStatusBadgeVariant } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { DataTable, Column } from '../../components/common/DataTable';
 import {
-  Award,
   PlusCircle,
   Eye,
   Edit,
   Trash2,
-  Calendar,
   Save,
-  CheckCircle2,
 } from 'lucide-react';
 
 export const ManageExam: React.FC = () => {
-  const { exams, classes, addExam, updateExam, deleteExam, setCurrentRoute } = useSchool();
+  const { exams, classes, addExam, updateExam, deleteExam } = useSchool();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [examToDelete, setExamToDelete] = useState<Exam | null>(null);
 
+  const currentYear = String(new Date().getFullYear());
+  const todayStr = new Date().toISOString().split('T')[0];
+
   const [formData, setFormData] = useState({
     name: '',
-    academicYear: '2026',
-    startDate: '2026-11-15',
-    endDate: '2026-11-28',
+    academicYear: currentYear,
+    startDate: todayStr,
+    endDate: todayStr,
     totalMarks: 100,
     passingMarks: 33,
     status: 'Upcoming' as 'Upcoming' | 'Ongoing' | 'Published' | 'Archived',
@@ -53,9 +52,9 @@ export const ManageExam: React.FC = () => {
     setIsAddModalOpen(false);
     setFormData({
       name: '',
-      academicYear: '2026',
-      startDate: '2026-11-15',
-      endDate: '2026-11-28',
+      academicYear: currentYear,
+      startDate: todayStr,
+      endDate: todayStr,
       totalMarks: 100,
       passingMarks: 33,
       status: 'Upcoming',
@@ -76,8 +75,8 @@ export const ManageExam: React.FC = () => {
       header: 'Examination Session',
       sortable: true,
       render: (ex) => (
-        <div>
-          <p className="font-bold text-[#172554] hover:text-[#2563EB] cursor-pointer" onClick={() => setSelectedExam(ex)}>
+        <div onClick={() => setSelectedExam(ex)} className="cursor-pointer">
+          <p className="font-bold text-[#172554] hover:text-[#2563EB]">
             {ex.name}
           </p>
           <p className="text-xs text-slate-400 font-mono">Session: {ex.academicYear}</p>
@@ -179,7 +178,7 @@ export const ManageExam: React.FC = () => {
             <input
               type="text"
               required
-              placeholder="e.g. Annual Final Examination 2026"
+              placeholder="e.g. Annual Final Examination"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
@@ -361,6 +360,68 @@ export const ManageExam: React.FC = () => {
               </Button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* View Exam Details Modal */}
+      {selectedExam && (
+        <Modal
+          isOpen={Boolean(selectedExam)}
+          onClose={() => setSelectedExam(null)}
+          title={selectedExam.name}
+          subtitle={`Academic Session ${selectedExam.academicYear}`}
+          maxWidth="md"
+        >
+          <div className="space-y-4 text-xs sm:text-sm">
+            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <span className="font-semibold text-slate-600">Current Status</span>
+              <Badge variant={getStatusBadgeVariant(selectedExam.status)}>{selectedExam.status}</Badge>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <span className="text-xs text-slate-400 block">Start Date</span>
+                <span className="font-bold text-[#172554] font-mono">{selectedExam.startDate}</span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <span className="text-xs text-slate-400 block">End Date</span>
+                <span className="font-bold text-[#172554] font-mono">{selectedExam.endDate}</span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <span className="text-xs text-slate-400 block">Total Marks</span>
+                <span className="font-bold text-[#172554]">{selectedExam.totalMarks}</span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <span className="text-xs text-slate-400 block">Passing Marks</span>
+                <span className="font-bold text-emerald-700">{selectedExam.passingMarks}</span>
+              </div>
+            </div>
+
+            {selectedExam.description && (
+              <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+                <span className="text-xs font-semibold text-slate-600 block mb-1">Guidelines & Scope</span>
+                <p className="text-xs text-slate-700 leading-relaxed">{selectedExam.description}</p>
+              </div>
+            )}
+
+            <div className="pt-3 border-t border-slate-100 flex justify-end gap-2.5">
+              <Button variant="outline" size="sm" onClick={() => setSelectedExam(null)}>
+                Close
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={Edit}
+                onClick={() => {
+                  const target = selectedExam;
+                  setSelectedExam(null);
+                  setEditingExam(target);
+                }}
+              >
+                Edit Exam
+              </Button>
+            </div>
+          </div>
         </Modal>
       )}
 

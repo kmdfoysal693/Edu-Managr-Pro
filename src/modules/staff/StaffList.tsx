@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useSchool } from '../../context/SchoolContext';
 import { StaffMember } from '../../types';
 import { DataTable, Column } from '../../components/common/DataTable';
@@ -8,24 +8,19 @@ import { Modal } from '../../components/common/Modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { StaffIdCardModal } from './StaffIdCardModal';
 import {
-  Briefcase,
   UserPlus,
   Eye,
   Edit,
   Trash2,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
   Save,
-  CheckCircle2,
-  DollarSign,
   Filter,
   Contact,
+  Upload,
 } from 'lucide-react';
 
 export const StaffList: React.FC = () => {
-  const { staff, staffAttendance, updateStaff, deleteStaff, setCurrentRoute, departments: schoolDepts } = useSchool();
+  const { staff, staffAttendance, updateStaff, deleteStaff, setCurrentRoute, departments: schoolDepts, schoolSettings, showToast } = useSchool();
+  const editPhotoInputRef = useRef<HTMLInputElement>(null);
 
   const [deptFilter, setDeptFilter] = useState('All');
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
@@ -53,6 +48,50 @@ export const StaffList: React.FC = () => {
     if (!editingStaff) return;
     updateStaff(editingStaff.id, editingStaff);
     setEditingStaff(null);
+  };
+
+  const handleEditPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingStaff) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('error', 'Invalid Image File', 'Please select a valid image file (JPG, PNG, WebP).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (!dataUrl) return;
+      if (file.size > 350 * 1024 && file.type !== 'image/svg+xml') {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 600;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            setEditingStaff((prev) => (prev ? { ...prev, photo: canvas.toDataURL('image/jpeg', 0.85) } : prev));
+          } else {
+            setEditingStaff((prev) => (prev ? { ...prev, photo: dataUrl } : prev));
+          }
+        };
+        img.src = dataUrl;
+      } else {
+        setEditingStaff((prev) => (prev ? { ...prev, photo: dataUrl } : prev));
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const columns: Column<StaffMember>[] = [
@@ -395,6 +434,51 @@ export const StaffList: React.FC = () => {
           maxWidth="xl"
         >
           <form onSubmit={handleEditSubmit} className="space-y-4">
+            {/* Staff Photo Upload */}
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-4">
+              <img
+                src={editingStaff.photo || schoolSettings.logo}
+                alt={editingStaff.fullName}
+                className="w-16 h-20 rounded-lg object-cover border border-slate-200 bg-white shrink-0"
+              />
+              <div className="flex-1 space-y-2">
+                <p className="text-xs font-bold text-[#172554]">Staff Member Photo</p>
+                <input
+                  ref={editPhotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleEditPhotoUpload}
+                  className="hidden"
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    icon={Upload}
+                    onClick={() => editPhotoInputRef.current?.click()}
+                  >
+                    Choose File
+                  </Button>
+                  {editingStaff.photo && editingStaff.photo !== schoolSettings.logo && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      icon={Trash2}
+                      onClick={() => {
+                        setEditingStaff({ ...editingStaff, photo: schoolSettings.logo });
+                        if (editPhotoInputRef.current) editPhotoInputRef.current.value = '';
+                      }}
+                      className="text-rose-600 border-rose-200 hover:bg-rose-50"
+                    >
+                      Reset
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
